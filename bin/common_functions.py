@@ -30,12 +30,34 @@ def flux_to_sb(image, pixscale):
 def sb_to_flux(image, pixscale):
     return image*pixscale**2
 
-def calc_ith_isophote_radius(r, I, zp, mu_):
-    mu = zp-2.5*np.log10(I)
-    f = interp1d(r, mu, kind='cubic')
-    t = np.arange(np.min(r), np.max(r), 0.5)
-    r_ = t[np.argmin(abs(f(t) - mu_))]
-    return r_
+def calc_ith_isophote_radius(sma, inten, zp, target_mag):
+    # Переводим интенсивность в звездные величины
+    mu = -2.5 * np.log10(inten) + zp
+    
+    # Удаляем дубликаты, сохраняя порядок
+    r_unique = np.array([])
+    mu_unique = np.array([])
+
+    for i, r_, mu_ in zip(np.arange(len(sma)), sma, mu):
+        if mu_ in mu[i+1:]:
+            pass
+        else:
+            r_unique = np.append(r_unique, r_)
+            mu_unique = np.append(mu_unique, mu_)
+
+
+
+    
+    # Проверяем, достаточно ли точек
+    if len(mu_unique) < 4:
+        # Если мало данных, используем линейную интерполяцию
+        f = interp1d(mu_unique, r_unique, kind='linear', 
+                     bounds_error=False, fill_value='extrapolate')
+    else:
+        f = interp1d(mu_unique, r_unique, kind='cubic',
+                     bounds_error=False, fill_value='extrapolate')
+    
+    return float(f(target_mag))
 
 def AB_mag(data):
 
@@ -51,5 +73,6 @@ def AB_mag(data):
 
 
 def get_ell(r, ell, x):
-    foo = interp1d(r, ell)
+    foo = interp1d(r, ell, kind=3)
     return foo(x)
+

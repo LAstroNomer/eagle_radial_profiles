@@ -14,7 +14,7 @@ def get_image_params(fname):
     return gain, readnoise, exptime, n_images
 
 
-def plot_slices(ax, pa_bar=0, w=400, zp=25, pixscale=0.25, psf=None):
+def plot_slices(ax=None, pa_bar=0, w=400, zp=25, pixscale=0.25, flux_convert=False, psf=None):
 
     header = ''
     models = dict()
@@ -31,26 +31,42 @@ def plot_slices(ax, pa_bar=0, w=400, zp=25, pixscale=0.25, psf=None):
             models[tmp_func].append(line)
     xs = []
     ys = np.zeros(w)
-
+    model_data = dict()
     for key in models:
         with open('tmp.dat', 'w') as ff:
             print(header, file=ff)
             print(key, file=ff)
             for a in models[key]:
                 print(a, file=ff)
-        sp.call('makeimage18 tmp.dat --refimage=tmp.fits  -o dd.fits --psf=%s' % psf, shell=True)
+        if not(psf is None):
+            sp.call('makeimage18 tmp.dat --refimage=tmp.fits  -o dd.fits --psf=%s' % psf, shell=True)
+        else:
+            sp.call('makeimage18 tmp.dat --refimage=tmp.fits  -o dd.fits', shell=True)
 
-        tmp_image = flux_to_sb(fits.getdata('dd.fits'), pixscale)
-        h, w = tmp_image.shape
-        x = np.arange(w) - w // 2
-        image_r = rotate(tmp_image, pa_bar, reshape=False)
+        if flux_convert:
+            tmp_image = flux_to_sb(fits.getdata('dd.fits'), pixscale)
+        else:
+            tmp_image = fits.getdata('dd.fits')
+        model_data[key.split()[-1]] = tmp_image
 
-        y = image_r[:, w // 2]
-        ys += y
-        ax.plot(x, zp - 2.5 * np.log10((y)), '-', label=key)
-    ax.plot(x, zp - 2.5 * np.log10((ys)), '-', color='magenta', label='total')
+        if not(ax is None):
+            h, w = tmp_image.shape
+            x = np.arange(w) - w // 2
+            image_r = rotate(tmp_image, pa_bar, reshape=False)
 
-    return ax
+            y = image_r[:, w // 2]
+            ys += y
+            ax.plot(x, zp - 2.5 * np.log10((y)), '-', label=key)
+    if not(ax is None):
+        ax.plot(x, zp - 2.5 * np.log10((ys)), '-', color='magenta', label='total')
+    
+    total = np.zeros(tmp_image.shape)
+    for key  in model_data:
+        total += model_data[key]
+
+    model_data['total'] = total
+
+    return ax, model_data
 
 
 def imfit_edge(image, mask, xc, yc, Ie, re, n, ell_e, pa_e, I0d, hs, rbs, pa_d, z0, sky=0, noise=0, gain=0, readnoise=0,
