@@ -6,7 +6,13 @@ import csv
 import os
 stop_processing = False
 
+processed = set()
 
+if os.path.exists("results.csv"):
+    with open("results.csv", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            processed.add(row["name"])
 
 gals = sorted(list(set([a.split('_')[0] for a in os.listdir('../2d_results')])))
 profiles = os.listdir('profiles')
@@ -19,6 +25,14 @@ for gal in gals:
         fit_success = None
 
         fname = f'{gal}_{i}'
+
+        fname = f"{gal}_{i}"
+
+        if fname in processed:
+            print(f"Пропуск {fname}")
+            continue
+
+        
         profile_teg = f'{fname}_azim_0'
         profile_files = []
         for a in profiles:
@@ -54,11 +68,11 @@ for gal in gals:
                     writer.writerow(["name", "fit_success", "clicked_x"])
 
                 writer.writerow([
-                    gal,
+                    fname,
                     fit_success,
                     ";".join(map(str, clicked_x))
                 ])
-
+            processed.add(fname)
             print("Результат сохранен.")
 
         def on_click(event):
@@ -115,6 +129,7 @@ for gal in gals:
         fig.canvas.mpl_connect("button_press_event", on_click)
         fig.canvas.mpl_connect("key_press_event", on_key)
         fig.canvas.mpl_connect("close_event", on_close)
+        plt.suptitle(fname)
         plt.title(
             "ЛКМ — добавить метку | ПКМ — отменить последнюю | Y/N — оценка | S — вывести результат"
         )
