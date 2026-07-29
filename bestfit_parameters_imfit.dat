@@ -1,36 +1,37 @@
 # Best-fit model results for imfit 1.8.0 (OpenMP-enabled)
-# Generated on Thu Aug 14 19:26:49 2025 by the following command:
+# Generated on Wed Aug 13 05:09:40 2025 by the following command:
 #    imfit18 -c=imfit.cfg tmp.fits --mask=mask.fits --sky=1e-7 --readnoise=0.0 --save-model=model.fits --save-residual=res.fits --max-threads=12
 
 # Results of fit:
 #   Algorithm: Levenberg-Marquardt: status = 1 -- SUCCESS: Convergence in fit-statistic value.
 #   Fit statistic: chi-squared (data-based errors)
-#   Best-fit value: 57.132824
-#   Reduced value: 0.000869
-#   AIC: 91.142132
-#   BIC: 245.728932
+#   Best-fit value: 44.267377
+#   Reduced value: 0.000767
+#   AIC: 80.279228
+#   BIC: 241.613140
 
-X0		250.6585 # +/- 0.3412
-Y0		250.7957 # +/- 0.3468
+X0		250.3454 # +/- 0.3437
+Y0		250.5823 # +/- 0.3328
 FUNCTION Sersic_GenEllipse
 PA		      0 # +/- 0
 ell		      0 # +/- 0
 c0		      0 # +/- 0
-n		1.20461 # +/- 0.19458
-I_e		0.480669 # +/- 0.083745
-r_e		8.75171 # +/- 0.81267
+n		0.623733 # +/- 0.1346
+I_e		0.908176 # +/- 0.11661
+r_e		6.12323 # +/- 0.46796
 FUNCTION FerrersBar2D
-PA		4.92636 # +/- 0
-ell		0.202522 # +/- 0
-c0		-0.77453 # +/- 0
+PA		-100.836 # +/- 0
+ell		0.0924812 # +/- 0
+c0		0.0304442 # +/- 0
 n		      2 # +/- 0
 I_0		      0 # +/- 0
-a_bar		 6.3055 # +/- 0
-FUNCTION BrokenExponential
-PA		-33.2708 # +/- 29.466
-ell		0.0299913 # +/- 0.029325
-I_0		0.108236 # +/- 0.014402
-h1		62.3759 # +/- 6.513
-h2		24.0473 # +/- 3.0659
-r_break		124.279 # +/- 6.6462
-alpha		    0.9 # +/- 0
+a_bar		6.33622 # +/- 0
+FUNCTION DoubleBrokenExponential
+PA		34.7187 # +/- 11.588
+ell		-0.0865763 # +/- 0.034373
+I_0		0.36154 # +/- 0.085834
+h1		21.2639 # +/- 3.5629
+h2		49.1321 # +/- 4.3195
+h3		17.6263 # +/- 3.6246
+r_break1		 42.574 # +/- 5.364
+r_break2		131.061 # +/- 6.2271
