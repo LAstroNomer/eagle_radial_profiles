@@ -30,6 +30,9 @@ if __name__ == '__main__':
         for i in range(28,12,-1):
             list_models = np.array(os.listdir('../2d_results'))
             fname = f'{gal}_{i}'
+            if os.path.exists(f'pics/{fname}.jpg'):
+                continue
+            print(fname)
 
             for a in list_models:
                 if fname in a:
@@ -53,7 +56,7 @@ if __name__ == '__main__':
             pix2sec = 1.0
             step   = 0.03
             minsma = 1
-            maxsma = 250
+            maxsma = 230
 
             outp_format = 'jpg'
 
