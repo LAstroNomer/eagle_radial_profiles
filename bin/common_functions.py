@@ -5,6 +5,7 @@ from scipy.interpolate import interp1d
 import astropy.units as u
 import numpy as np
 import warnings
+from matplotlib import pyplot as plt
 
 
 def get_mag_zp(fname):
@@ -49,16 +50,23 @@ def calc_ith_isophote_radius(sma, inten, zp, target_mag):
 
     
     # Проверяем, достаточно ли точек
-    if len(mu_unique) < 4:
+    #if len(mu_unique) < 4:
         # Если мало данных, используем линейную интерполяцию
-        f = interp1d(mu_unique, r_unique, kind='linear', 
+    f = interp1d(mu_unique, r_unique, kind='linear', 
                      bounds_error=False, fill_value='extrapolate')
-    else:
-        f = interp1d(mu_unique, r_unique, kind='cubic',
-                     bounds_error=False, fill_value='extrapolate')
+    #else:
+    #    f = interp1d(mu_unique, r_unique, kind='cubic',
+    #                 bounds_error=False, fill_value='extrapolate')
     
-    return float(f(target_mag))
-
+    r25 = float(f(target_mag))
+    if r25<0:
+        plt.figure()
+        plt.plot(zp-2.5*np.log10(inten), sma)
+        plt.plot(np.arange(30, 20, -0.001), f(np.arange(30, 20, -0.001)))
+        print('r25 cal', f(25))
+        plt.axvline(25)
+        plt.show()
+    return r25
 def AB_mag(data):
 
     # init MJy/sr

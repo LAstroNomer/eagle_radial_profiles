@@ -4,6 +4,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 from bin.common_functions import flux_to_sb
 from scipy.ndimage import rotate
+import re
 
 def get_image_params(fname):
     header = fits.getheader(fname)
@@ -168,6 +169,165 @@ def read_imfit(file):
                     key1 = key + '_' + str(i)
             res[key1] = np.array([float(val), float(err)])
     return res
+
+def parse_imfit_output(filename: str) -> dict[str, any]:
+    """
+    Парсит выходной файл imfit в структурированный словарь Python.
+
+    Parameters
+    ----------
+    filename : str
+        Путь к файлу с результатами imfit
+
+    Returns
+    -------
+    Dict[str, Any]
+        Словарь с разобранными данными
+
+    Structure:
+    --------
+    result
+├── metadata: {}
+│
+├── fit_info
+│   ├── best_fit_value: float
+│   ├── reduced_value: float
+│   ├── AIC: float
+│   ├── BIC: float
+│   ├── algorithm: str
+│   ├── statistic: str
+│   │
+│   └── global_params (опционально)
+│       ├── X0
+│       │   ├── value: float
+│       │   ├── error: float | None
+│       │   └── limits: str | None
+│       │
+│       └── Y0
+│           ├── value: float
+│           ├── error: float | None
+│           └── limits: str | None
+│
+└── functions: list[]
+    │
+    └── [0..N]
+        ├── name: str
+        │
+        └── parameters: dict{}
+            ├── param1
+            │   ├── value: float | str
+            │   ├── error: float | str | None
+            │   └── limits: str | None
+            │
+            ├── param2
+            │   ├── value: float | str
+            │   ├── error: float | str | None
+            │   └── limits: str | None
+            │
+            └── paramN
+                ├── value: float | str
+                ├── error: float | str | None
+                └── limits: str | None
+    """
+    result = {
+        'metadata': {},
+        'fit_info': {},
+        'functions': []
+    }
+
+    current_function = None
+
+    with open(filename, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+
+    for line in lines:
+        line = line.strip()
+
+        # Пропускаем пустые строки
+        if not line:
+            continue
+
+        # Парсим метаданные из комментариев
+        if line.startswith('#'):
+            if 'Best-fit value:' in line:
+                result['fit_info']['best_fit_value'] = float(line.split(':')[1].strip())
+            elif 'Reduced value:' in line:
+                result['fit_info']['reduced_value'] = float(line.split(':')[1].strip())
+            elif 'AIC:' in line:
+                result['fit_info']['AIC'] = float(line.split(':')[1].strip())
+            elif 'BIC:' in line:
+                result['fit_info']['BIC'] = float(line.split(':')[1].strip())
+            elif 'Algorithm:' in line:
+                result['fit_info']['algorithm'] = line.split('Algorithm:')[1].split('--')[0].strip()
+            elif 'Fit statistic:' in line:
+                result['fit_info']['statistic'] = line.split('Fit statistic:')[1].strip()
+
+        # Парсим глобальные параметры (X0, Y0)
+        elif line.startswith('X0') or line.startswith('Y0'):
+            parts = line.split()
+            param_name = parts[0]
+            param_value = float(parts[1])
+
+            if 'global_params' not in result['fit_info']:
+                result['fit_info']['global_params'] = {}
+
+            # Парсим ошибку, если есть
+            error = None
+            if '#' in line:
+                error_match = re.search(r'\+/-\s*([\d\.]+)', line)
+                if error_match:
+                    error = float(error_match.group(1))
+            limits = None
+            if len(line.split()) == 3:
+                limits = line.split()[-1]
+
+            result['fit_info']['global_params'][param_name] = {
+                'value': param_value,
+                'error': error,
+                'limits': limits
+            }
+
+        # Начало новой функции
+        elif line.startswith('FUNCTION'):
+            func_name = line.split()[1]
+            current_function = {
+                'name': func_name,
+                'parameters': {}
+            }
+            result['functions'].append(current_function)
+
+        # Парсим параметры функции
+        elif current_function is not None and line:
+            parts = line.split()
+            if len(parts) >= 2:
+                param_name = parts[0]
+
+                # Парсим значение (может быть числом или строкой)
+                try:
+                    param_value = float(parts[1])
+                except ValueError:
+                    param_value = parts[1]  # оставляем строкой, если не число
+
+                # Парсим ошибку
+                error = None
+                if '#' in line:
+                    error_match = re.search(r'\+/-\s*([\d\.]+)', line)
+                    if error_match:
+                        try:
+                            error = float(error_match.group(1))
+                        except:
+                            error = error_match.group(1)
+                limits = None
+                if len(line.split()) == 3:
+                    limits = line.split()[-1]
+
+                current_function['parameters'][param_name] = {
+                    'value': param_value,
+                    'error': error,
+                    'limits': limits
+                }
+
+    return result
 
 
 def get_ell(r, ell, x):

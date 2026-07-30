@@ -27,7 +27,7 @@ def cheak_not_zero(models):
 if __name__ == '__main__':
     gals = sorted(list(set([a.split('_')[0] for a in os.listdir('../2d_results')])))
     for gal in gals:
-        for i in range(28,12,-1):
+        for i in range(28,11,-1):
             list_models = np.array(os.listdir('../2d_results'))
             fname = f'{gal}_{i}'
             if os.path.exists(f'pics/{fname}.jpg'):
@@ -41,6 +41,9 @@ if __name__ == '__main__':
 
 
             tmp_image = f'/home/android/eagle/fits_images/{fname}_face.fits'
+            if not(os.path.exists(tmp_image)):
+                continue
+        
             tmp_data      = fits.getdata(tmp_image)
             tmp_band = tmp_data[2]
             tmp_band = zoomdown(tmp_band, 0.5)/4
@@ -56,7 +59,12 @@ if __name__ == '__main__':
             pix2sec = 1.0
             step   = 0.03
             minsma = 1
-            maxsma = 230
+            if i <15:
+                maxsma = 170
+            elif i < 24:
+                maxsma = 200
+            else:
+                maxsma = 230
 
             outp_format = 'jpg'
 
@@ -167,6 +175,10 @@ if __name__ == '__main__':
             mask_image = mask
             
             r25 = calc_ith_isophote_radius(sma, inten, zp, 25)
+            if r25 < 0:
+                print('r25', r25)
+ 
+                exit()
             posang = get_ell(sma, PA, r25)
             ellip    = get_ell(sma, ell, r25)
             xcen = xc
