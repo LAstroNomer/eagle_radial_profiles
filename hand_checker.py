@@ -1,10 +1,12 @@
-import matplotlib.pyplot as plt
-import numpy as np
-from bin.common_functions import calc_ith_isophote_radius, AB_mag, get_ell
-from bin.imfit_fit import parse_imfit_output
-
 import csv
 import os
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+from bin.common_functions import AB_mag, calc_ith_isophote_radius, get_ell
+from bin.imfit_fit import parse_imfit_output
+
 stop_processing = False
 
 processed = set()
@@ -16,7 +18,7 @@ if os.path.exists("results.csv"):
             processed.add(row["name"])
 
 gals = sorted(list(set([a.split('_')[0] for a in os.listdir('../2d_results')])))
-list_models = np.array(os.listdir('../2d_results'))
+list_models = np.array(os.listdir('../image_results'))
 
 profiles = os.listdir('profiles')
 
@@ -29,7 +31,7 @@ for gal in gals:
     fit_result[gal]['h2']  = []
     fit_result[gal]['h3']  = []
 
-    for i in range(12,29,1):
+    for i in range(28,11,-1):
         clicked_x = []
         lines = []          # Здесь будем хранить объекты линий
         fit_success = None
@@ -44,7 +46,7 @@ for gal in gals:
             continue
         for a in list_models:
             if fname in a:
-                tmp_model = a
+                tmp_model = a[:-4] + '.dat'
                 break
 
         model = parse_imfit_output(f'../2d_results/{tmp_model}')
@@ -74,7 +76,7 @@ for gal in gals:
             fit_result[gal]['h3'].append(params['h3']['value'])
 
 for gal in gals:
-    for i in range(12,29,1):
+    for i in range(28,11,-1):
         
 
         clicked_x = []
@@ -86,7 +88,7 @@ for gal in gals:
             continue
         for a in list_models:
             if fname in a:
-                tmp_model = a
+                tmp_model = a[:-4]+'.dat'
                 break
 
         model = parse_imfit_output(f'../2d_results/{tmp_model}')
@@ -213,15 +215,15 @@ for gal in gals:
         h3 = fit_result[gal]['h3']
 
 
-        ax1.plot(np.arange(12,29,1), np.array(rb1)*0.2, '-o', color='orange')
-        ax1.plot(np.arange(12,29,1), np.array(rb2)*0.2, '-o', color='blue')
+        ax1.plot(np.arange(28,11,-1), np.array(rb1)*0.2, '-o', color='orange')
+        ax1.plot(np.arange(28,11,-1), np.array(rb2)*0.2, '-o', color='blue')
         ax1.axvline(i, ls='--', color='red')
         ax1.set_xlim(12,28)
 
         ax2 = axs[2]
-        ax2.plot(np.arange(12,29,1), np.array(h1)*0.2, '-o', label='h1')
-        ax2.plot(np.arange(12,29,1), np.array(h2)*0.2, '-o', label='h2')
-        ax2.plot(np.arange(12,29,1), np.array(h3)*0.2, '-o', label='h3')
+        ax2.plot(np.arange(28,11,-1), np.array(h1)*0.2, '-o', label='h1')
+        ax2.plot(np.arange(28,11,-1), np.array(h2)*0.2, '-o', label='h2')
+        ax2.plot(np.arange(28,11,-1), np.array(h3)*0.2, '-o', label='h3')
         
         ax2.axvline(i, ls='--', color='red')
         ax2.set_xlim(12,28)

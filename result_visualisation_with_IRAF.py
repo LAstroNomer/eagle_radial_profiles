@@ -28,7 +28,7 @@ if __name__ == '__main__':
     gals = sorted(list(set([a.split('_')[0] for a in os.listdir('../2d_results')])))
     for gal in gals:
         for i in range(28,11,-1):
-            list_models = np.array(os.listdir('../2d_results'))
+            list_models = np.array(os.listdir('../image_results'))
             fname = f'{gal}_{i}'
             if os.path.exists(f'pics/{fname}.jpg'):
                 continue
@@ -36,7 +36,7 @@ if __name__ == '__main__':
 
             for a in list_models:
                 if fname in a:
-                    tmp_model = a
+                    tmp_model = a[:-4]+'.dat'
                     break
 
 
