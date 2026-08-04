@@ -16,7 +16,7 @@ def set_parameters_from_dict(component, params_dict, fixed=False):
         max_val = values[2]
 
         if param_name == "alpha":
-            fixed_ = True
+            fixed_ = False
             value = 1.0
         else:
             fixed_ = fixed
@@ -65,7 +65,7 @@ def set_broken_disk_from_exponential(disk_model, disk_cfg, bulge_cfg, disk_fix=F
     disk.h1.setValue(h, [0.1*h, 10*h], fixed=disk_fix)
     disk.h2.setValue(h, [0.1*h, 10*h], fixed=disk_fix)
     disk.r_break.setValue(3*h, [re*3, 250], fixed=disk_fix)
-    disk.alpha.setValue(2, [1, 100], fixed=True)
+    disk.alpha.setValue(1, [1, 100], fixed=False)
     return disk
 
 def build_model(bulge_model, disk_model,
