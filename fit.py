@@ -14,7 +14,7 @@ def fit_step(image, sigma, bulge_model, disk_model,
                         xc,
                         yc
                         )
-    result, imfit = imfit_fit(image, model, sigma, **kwargs)
+    result, imfit = imfit_fit(image, model, sigma, ftol=1e-6, **kwargs)
     #print(imfit.getModelDescription())
     return result, imfit
 

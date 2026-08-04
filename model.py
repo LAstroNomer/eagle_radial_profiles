@@ -14,11 +14,17 @@ def set_parameters_from_dict(component, params_dict, fixed=False):
         value = values[0]
         min_val = values[1]
         max_val = values[2]
+
+        if param_name == "alpha":
+            fixed_ = True
+            value = 1.0
+        else:
+            fixed_ = fixed
         
         # Проверяем, есть ли у компонента такой параметр
         if hasattr(component, param_name):
             
-            getattr(component, param_name).setValue(value, [min_val, max_val], fixed=fixed)
+            getattr(component, param_name).setValue(value, [min_val, max_val], fixed=fixed_)
         else:
             print(f"Предупреждение: параметр '{param_name}' не найден в компоненте")
 
@@ -29,7 +35,7 @@ def init_default_bulge(bulge_model, bulge_fix=False):
     bulge.ell.setValue(0.2, [0.01,0.7], fixed=bulge_fix)
     bulge.I_e.setValue(100, [0, 10**5], fixed=bulge_fix)
     bulge.r_e.setValue(5, [0.1, 25], fixed=bulge_fix)
-    bulge.n.setValue(2,[0.5,4], fixed=bulge_fix)
+    bulge.n.setValue(1,[0.5,4], fixed=bulge_fix)
     return bulge
 
 
@@ -58,8 +64,8 @@ def set_broken_disk_from_exponential(disk_model, disk_cfg, bulge_cfg, disk_fix=F
     re = bulge_cfg["r_e"][0]
     disk.h1.setValue(h, [0.1*h, 10*h], fixed=disk_fix)
     disk.h2.setValue(h, [0.1*h, 10*h], fixed=disk_fix)
-    disk.r_break.setValue(3*h, [re*3, 240], fixed=disk_fix)
-    disk.alpha.setValue(2, [1, 100], fixed=disk_fix)
+    disk.r_break.setValue(3*h, [re*3, 250], fixed=disk_fix)
+    disk.alpha.setValue(2, [1, 100], fixed=True)
     return disk
 
 def build_model(bulge_model, disk_model,
@@ -87,6 +93,9 @@ def build_model(bulge_model, disk_model,
             set_parameters_from_dict(disk, disk_cfg, disk_fix)
         else:
             disk = set_broken_disk_from_exponential(disk_model, disk_cfg, bulge_cfg, disk_fix)
+    elif disk_model == "Exponential":
+        disk = pyimfit.make_imfit_function(disk_model, label='disk')
+        set_parameters_from_dict(disk, disk_cfg, disk_fix)
             
 
     # -------------------------------

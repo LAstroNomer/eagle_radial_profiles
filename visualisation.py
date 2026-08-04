@@ -9,7 +9,8 @@ from model import set_parameters_from_dict
 
 
 class MakeImage:
-    def __init__(self, model):
+    def __init__(self, imfit):
+        model = imfit.getModelAsDict()
         self.function_sets = model['function_sets']
         self.xc = self.function_sets[0]['X0'][0]
         self.yc = self.function_sets[0]['Y0'][0]
@@ -108,7 +109,7 @@ class ShowResults:
             self.image = image 
         self.zp = zp
 
-        makeimage = fit
+        makeimage = MakeImage(fit)
         self.labels = makeimage.labels
 
         self.models = {}
@@ -130,7 +131,7 @@ class ShowResults:
         self.maj_axis = maj_axis
 
 
-    def plot_cuts(self):
+    def plot_cuts(self, file):
         _fig, ax = plt.subplots(1, 2, figsize=(10,5))
         h, w = self.image.shape
 
@@ -163,8 +164,8 @@ class ShowResults:
             ax[1].plot(np.arange(h), mag, '-', label=label)
         ax[1].invert_yaxis()
         ax[1].set_ylim(30,)
-        plt.show()
-
+        #plt.show()
+        plt.savefig(file)
 
     def convert_int_to_mag(self, img, zp):
         mag = np.full_like(img, np.nan, dtype=float)
@@ -183,14 +184,20 @@ class FitAnalysis:
 
             bulge = state["functions"]["bulge"]
             disk = state["functions"]["disk"]
-
+            if "h1" in disk:
+                pass
+            else:
+                disk["h1"] = disk["h"]
+                disk["h2"] = disk["h"]
+                disk["r_break"] = [-1, -1, -1]
+                disk["alpha"] = [-1, -1, -1]
             rows.append({
                 "chi2": run["chi2"],
                 "AIC": run["aic"],
 
                 "n": bulge["n"][0],
                 "re": bulge["r_e"][0],
-
+    
                 "h1": disk["h1"][0],
                 "h2": disk["h2"][0],
                 "r_break": disk["r_break"][0],
