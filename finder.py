@@ -135,6 +135,8 @@ def check_correct_fit(imfit, state, shape):
         print("too big bulge", bt)
         return False
 
+    return True
+
     
 
 
