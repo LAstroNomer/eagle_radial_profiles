@@ -148,7 +148,7 @@ class ShowResults:
             mag = self.convert_int_to_mag(self.models[label][h//2, :], zp)
             ax[0].plot(np.arange(w), mag, '-', label=label)
         ax[0].invert_yaxis()
-        ax[0].set_ylim(30,)
+        ax[0].set_ylim(30,15)
 
 
         if self.maj_axis:
