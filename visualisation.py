@@ -35,7 +35,7 @@ class MakeImage:
                 self.disk['label'] = label
                 self.disk['name'] = funcs['name']
                 self.disk['parameters'] = funcs['parameters']
-                print(self.disk['parameters'])
+                #print(self.disk['parameters'])
                 self.disk['model'] = pyimfit.make_imfit_function(self.disk['name'], label=self.disk['label'])
                 self.init_disk()
                 self.models.append([label, self.disk])
@@ -163,9 +163,9 @@ class ShowResults:
             mag = self.convert_int_to_mag(self.models[label][:, w//2], zp)
             ax[1].plot(np.arange(h), mag, '-', label=label)
         ax[1].invert_yaxis()
-        ax[1].set_ylim(30,)
+        ax[1].set_ylim(30,15)
         #plt.show()
-        plt.savefig(file)
+        plt.savefig(file, format='jpg')
 
     def convert_int_to_mag(self, img, zp):
         mag = np.full_like(img, np.nan, dtype=float)

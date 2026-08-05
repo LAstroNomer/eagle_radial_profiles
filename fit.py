@@ -37,3 +37,17 @@ def get_fit_state(imfit):
         "yc": model["function_sets"][0]["Y0"][0],
         "functions": function_dict,
     }
+
+def save_imfit_to_data(result, imfit, output):
+    imfit.saveCurrentModelToFile(output, includeImageOptions=True)
+    with open(output, "a") as file:
+        print("open")
+        for key in result.keys():
+            if key == "params":
+                continue
+
+            if key == "paramErrs":
+                continue
+
+            print(key, result[key], file=file)
+

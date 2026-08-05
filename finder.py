@@ -65,18 +65,18 @@ def multi_start_fit(
 
                 #    params[name][0] = new_value
                 #    print(name, new_value)
-                #if name == "r_break":
-                #    new_value = rng.uniform(low,high)
-                #    params[name][0] = new_value
-                #    print(name, new_value)
+                if name == "r_break":
+                    new_value = rng.uniform(low,high)
+                    params[name][0] = new_value
+                    print(name, new_value)
 
-                #else:                    
-                new_value = value * rng.uniform(1 - scatter[name],
-                                                1 + scatter[name])
+                else:                    
+                    new_value = value * rng.uniform(1 - scatter[name],
+                                                    1 + scatter[name])
 
-                new_value = np.clip(new_value, low, high)
+                    new_value = np.clip(new_value, low, high)
 
-                params[name][0] = new_value
+                    params[name][0] = new_value
 
         result, imfit = fit_step(
             image,
