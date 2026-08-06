@@ -28,16 +28,17 @@ if __name__ == '__main__':
     gals = sorted(list(set([a.split('_')[0] for a in os.listdir('../2d_results')])))
     for gal in gals:
         for i in range(28,11,-1):
-            list_models = np.array(os.listdir('../image_results'))
+            #list_models = np.array(os.listdir('fits/{gal}_{i}/best_break.dat'))
             fname = f'{gal}_{i}'
-            if os.path.exists(f'pics/{fname}.jpg'):
+            if os.path.exists(f'pics_new/{fname}.jpg'):
                 continue
             print(fname)
 
-            for a in list_models:
-                if fname in a:
-                    tmp_model = a[:-4]+'.dat'
-                    break
+            #for a in list_models:
+            #    if fname in a:
+            #        tmp_model = a[:-4]+'.dat'
+            #        break
+            tmp_model = f'fits/{gal}_{i}/best_break.dat'
 
 
             tmp_image = f'/home/android/eagle/fits_images/{fname}_face.fits'
@@ -110,9 +111,11 @@ if __name__ == '__main__':
                         hpa=hpa, model_file=model_file)
             sma, inten, inten_err, ell, errell, PA, errPA, x0, y0, B4, errB4 =read_ell(ell_file)
 
-            sp.call(f'cp ../2d_results/{tmp_model} bestfit_parameters_imfit.dat', shell=True)
+            sp.call(f'cp {tmp_model} bestfit_parameters_imfit.dat', shell=True)
             _, models = plot_slices(ax=None)
+            
             models = cheak_not_zero(models)
+
             for key in models:
                 fits.writeto(f'model_{key}.fits', models[key], overwrite=True)
             #sp.call(f'makeimage18 ../2d_results/{tmp_model} --refimage={input_image}', shell=True)
@@ -313,4 +316,5 @@ if __name__ == '__main__':
             
             plt.suptitle(fname)
             #plt.show()
-            plt.savefig(f'pics/{fname}.jpg', format='jpg')
+            plt.savefig(f'pics_new/{fname}.jpg', format='jpg')
+            sp.call('rm *.fits bestfit_parameters_imfit.dat', shell=True )

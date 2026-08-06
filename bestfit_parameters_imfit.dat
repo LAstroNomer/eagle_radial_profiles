@@ -1,26 +1,25 @@
-# Best-fit model results for imfit 1.8.0 (OpenMP-enabled)
-# Generated on Wed Aug 27 11:49:55 2025 by the following command:
-#    imfit18 -c=imfit.cfg tmp.fits --mask=mask.fits --sky=1e-7 --readnoise=0.0 --save-model=model.fits --save-residual=res.fits --max-threads=12
 
-# Results of fit:
-#   Algorithm: Levenberg-Marquardt: status = 1 -- SUCCESS: Convergence in fit-statistic value.
-#   Fit statistic: chi-squared (data-based errors)
-#   Best-fit value: 9.738143
-#   Reduced value: 0.001791
-#   AIC: 31.786700
-#   BIC: 104.373205
-
-X0		247.0878 # +/- 1.0321
-Y0		251.0937 # +/- 0.8370
-FUNCTION Sersic_GenEllipse
-PA		-66.1983 # +/- 19.768
-ell		0.369081 # +/- 0.31862
-c0		      0 # +/- 0
-n		0.660341 # +/- 0.49896
-I_e		0.0799668 # +/- 0.061868
-r_e		     10 # +/- 0
-FUNCTION Exponential
-PA		-4.27103 # +/- 83.345
-ell		0.0872664 # +/- 0.26758
-I_0		0.159496 # +/- 0.29692
-h		8.61833 # +/- 4.673
+X0		250.5001147307571		# +/- 0.05790670815603992
+Y0		250.3931169549545		# +/- 0.10294889842855294
+FUNCTION Sersic   # LABEL bulge
+PA		173.68038650272877		# +/- 1.5835287272416105
+ell		0.5090794091634744		# +/- 0.021439097555796666
+n		0.7047718629711891		# +/- 0.061201805978698426
+I_e		15.262642649972001		# +/- 0.8958508568741848
+r_e		4.2005303072741205		# +/- 0.13759947432056205
+FUNCTION BrokenExponential   # LABEL disk
+PA		84.12880025049402		# +/- 1.5835287272416105
+ell		0.029876922068247134		# +/- 0.021439097555796666
+I_0		3.838121102045733		# +/- 0.061201805978698426
+h1		9.917110309712113		# +/- 0.8958508568741848
+h2		32.674846948738676		# +/- 0.13759947432056205
+r_break		43.58819678717503		# +/- 21.282341262622023
+alpha		1.0		# +/- 0.022982870668371024
+solverName LM
+fitConverged True
+nIter 24
+nFuncEvals 348
+fitStat 148.0766308775307
+fitStatReduced 0.0005923396945330167
+aic 176.07831097833676
+bic 322.08565763335207

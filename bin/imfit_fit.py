@@ -25,14 +25,17 @@ def plot_slices(ax=None, pa_bar=0, w=400, zp=25, pixscale=0.25, flux_convert=Fal
                 header += line + '\n'
                 continue
             if line[0] == 'F':
-                tmp_func = line
+                tmp_func = line.split("#")[0]
                 models[tmp_func] = []
                 continue
+            if 'solverName' in line:
+                break
             # print(line)
             models[tmp_func].append(line)
     xs = []
     ys = np.zeros(w)
     model_data = dict()
+    #print('models', models)
     for key in models:
         with open('tmp.dat', 'w') as ff:
             print(header, file=ff)
