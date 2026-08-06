@@ -119,11 +119,11 @@ def check_correct_fit(imfit, state, shape):
         return True
 
     if state["functions"]["disk"]["r_break"][0] > 225:
-        print("too big rb")
+        print("too big rb", state["functions"]["disk"]["r_break"][0])
         return False
 
     if state["functions"]["disk"]["h1"][0] > 100:
-        print("too big h1")
+        print("too big h1", state["functions"]["disk"]["h1"][0])
         return False
 
     bulge_image = makeimage.get_model_image(label="bulge", size=shape)
@@ -131,9 +131,9 @@ def check_correct_fit(imfit, state, shape):
 
     bt = np.sum(bulge_image)/(np.sum(bulge_image) + np.sum(disk_image))
 
-    if bt > 0.8:
-        print("too big bulge", bt)
-        return False
+    #if bt > 0.8:
+     #   print("too big bulge", bt)
+     #   return False
 
     return True
 

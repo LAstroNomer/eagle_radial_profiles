@@ -10,6 +10,53 @@ pd.set_option('display.expand_frame_repr', False)  # Не переносить �
 import os
 from pathlib import Path
 import re
+import numpy as np
+import pyimfit
+from visualisation import ShowResults
+from astropy.io import fits
+from bin.common_functions import AB_mag
+
+def parse_config_fixed( lines: List[str], labels=None) -> ModelDescription:
+    """
+    Parse an Imfit model configuration from a list of strings.
+
+    Parameters
+    ----------
+    lines : list of str
+        String representantion of Imfit model configuration.
+
+    Returns
+    -------
+    model : :class:`~imfit.ModelDescription`
+        A model description object.
+
+    See also
+    --------
+    parse_config_file
+    """
+    lines = clean_lines(lines)
+
+    model = ModelDescription()
+
+    block_start = 0
+    functionBlock_id = 0   # number of current function set
+    for i in range(block_start, len(lines)):
+        if lines[i].startswith(x0_str):
+            if block_start == 0:
+                options = read_options(lines[block_start:i])
+                model.options.update(options)
+            else:
+                # possible auto-label-generation code
+                funcSetLabel = "fs{0:d}".format(functionBlock_id)
+                funcSetLabel = ""
+                model.addFunctionSet(read_function_set(funcSetLabel, lines[block_start:i]))
+                functionBlock_id += 1
+            block_start = i
+    funcSetLabel = "fs{0:d}".format(functionBlock_id)
+    funcSetLabel = ""
+    model.addFunctionSet(read_function_set(funcSetLabel, lines[block_start:i + 1]))
+    return model
+
 
 def cluster_results(
     results: pd.DataFrame,
@@ -83,7 +130,7 @@ def cluster_results(
         .agg(
             size=("cluster", "size"),
             chi2=("chi2", "min"),
-            AIC=("AIC", "min"),
+            BIC=("BIC", "min"),
             r_break=("disk_r_break", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
             h1=("disk_h1", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
             h2=("disk_h2", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
@@ -220,7 +267,7 @@ def parse_break_file(filepath):
     return params
 
 
-def load_break_files_from_directory(directory, pattern="break_*.dat"):
+def load_break_files_from_directory(directory, pattern="break_*.dat", verbouse=True):
     """
     Чтение всех файлов break_*.dat из папки и создание DataFrame.
     
@@ -247,7 +294,8 @@ def load_break_files_from_directory(directory, pattern="break_*.dat"):
     if not file_list:
         raise FileNotFoundError(f"Файлы {pattern} не найдены в {directory}")
     
-    print(f"Найдено файлов: {len(file_list)}")
+    if verbouse:
+        print(f"Найдено файлов: {len(file_list)}")
     
     # Парсим каждый файл
     results_list = []
@@ -264,7 +312,7 @@ def load_break_files_from_directory(directory, pattern="break_*.dat"):
     
     # Переименовываем статистики для совместимости с cluster_results
     rename_map = {
-        'fitStatReduced': 'chi2',
+        'fitStat': 'chi2',
         'aic': 'AIC',
         'bic': 'BIC',
         'fitConverged': 'fitConverged',
@@ -280,12 +328,13 @@ def load_break_files_from_directory(directory, pattern="break_*.dat"):
     
     # Отфильтровываем только сошедшиеся решения
     converged_count = df['fitConverged'].sum() if 'fitConverged' in df.columns else len(df)
-    print(f"Сошедшихся решений: {converged_count} из {len(df)}")
+    if verbouse:
+        print(f"Сошедшихся решений: {converged_count} из {len(df)}")
     
     return df
 
 
-def prepare_dataframe_for_clustering(df, keep_converged_only=True):
+def prepare_dataframe_for_clustering(df, keep_converged_only=True, verbouse=True):
     """
     Подготовка DataFrame для кластеризации.
     
@@ -306,14 +355,15 @@ def prepare_dataframe_for_clustering(df, keep_converged_only=True):
     # Оставляем только сошедшиеся
     if keep_converged_only and 'fitConverged' in df_prepared.columns:
         df_prepared = df_prepared[df_prepared['fitConverged']].copy()
-        print(f"Оставлено {len(df_prepared)} сошедшихся решений для кластеризации")
+        if verbouse:
+            print(f"Оставлено {len(df_prepared)} сошедшихся решений для кластеризации")
     
     return df_prepared
 
 
-def run_clustering(dir_path, features=None):
-    df = load_break_files_from_directory(dir_path)
-    df_clean = prepare_dataframe_for_clustering(df)
+def run_clustering(dir_path, features=None, verbouse=True):
+    df = load_break_files_from_directory(dir_path, verbouse=verbouse)
+    df_clean = prepare_dataframe_for_clustering(df, verbouse=verbouse)
 
 
     if features is None:
@@ -331,12 +381,61 @@ def run_clustering(dir_path, features=None):
 
 
 if __name__ == '__main__':
-    dir_path = "fits/737885_28"
+    from matplotlib import pyplot as plt
+    #plt.figure()
+    for i in range(28,11,-1):
+        file = f'746518_{i}'
+        dir_path = f"fits/{file}"
+        if file in ["746518_18"]:
+            continue
 
+        clustered, summary, best = run_clustering(dir_path, verbouse=False)
+        labels = clustered['cluster'].values 
+        labels = sorted(set(labels))
+        k = labels[0]
+        exp_best = parse_break_file(f'{dir_path}/best_exp.dat')
+        print(summary)
+        print(i)
+        for k_ in np.append(np.arange(len(labels)-1), -1):
+            if k_ in labels:
+                if exp_best["BIC"]-best["BIC"][np.int64(k_)] >= 10:
+                    k = np.int64(k_)
+                    break
+      
 
-    clustered, summary, best = run_clustering(dir_path)
+       
+        break_best = parse_break_file(f'{dir_path}/best_break.dat')
 
+        #print(exp_best["BIC"])
+        #print(clustered)
+        #print(summary)
+        #print(i, best["filename"][0], best["disk_alpha"][0], best["BIC"][0], break_best["BIC"]-best["BIC"][0], exp_best["BIC"]-best["BIC"][0])
+        if exp_best["BIC"]-best["BIC"][k] < 10:
+            #plt.plot(i, exp_best["bulge_n"], 'or')
+            file_best = f'{dir_path}/best_exp.dat'
+        else:
+            file_best = f'{dir_path}/{best["filename"][k]}'
+            #plt.plot(i, best["disk_r_break"][k], 'ob')
+            #plt.plot(i, best["disk_h2"][0]*0.2, 'og')
+            #plt.plot(i, break_best["disk_r_break"], 'or')
+        image = fits.getdata(f"../images_r/{file}_face.fits")
+        with open(file_best, 'r') as ff:
+            lines = ff.readlines()[:-8]
+
+       
+        model_desc = pyimfit.parse_config(lines)
+        print('lables',model_desc.functionLabelList())
+        imfit = pyimfit.Imfit(model_desc)
+        # Все публичные методы (без __магических__)
+        methods = [m for m in dir(model_desc) if not m.startswith('_')]
+       
+        print(imfit.getModelDescription())
+        zp = 8.9 -2.5*np.log10(AB_mag(1))
+        sr = ShowResults(image, imfit, zp = zp)
+        sr.labels = ["bulge", "disk", "total"]
+        sr.plot_cuts(f'best_pics/{file}.jpg')
+
+        #print(summary)
+        
     
-    #print(clustered)
-    print(summary)
-    print(best)
+    #plt.savefig('r_evo.jpg', format='jpg')

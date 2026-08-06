@@ -11,9 +11,11 @@ def set_parameters_from_dict(component, params_dict, fixed=False):
     """
     for param_name, values in params_dict.items():
         #print('value', values)
+
         value = values[0]
-        min_val = values[1]
-        max_val = values[2]
+        if (len(values) > 1):
+            min_val = values[1]
+            max_val = values[2]
 
         if param_name == "alpha":
             fixed_ = False
@@ -23,8 +25,11 @@ def set_parameters_from_dict(component, params_dict, fixed=False):
         
         # Проверяем, есть ли у компонента такой параметр
         if hasattr(component, param_name):
-            
-            getattr(component, param_name).setValue(value, [min_val, max_val], fixed=fixed_)
+            if len(values) > 1:
+                getattr(component, param_name).setValue(value, [min_val, max_val], fixed=fixed_)
+            else:
+                getattr(component, param_name).setValue(value, fixed=fixed_)
+
         else:
             print(f"Предупреждение: параметр '{param_name}' не найден в компоненте")
 
