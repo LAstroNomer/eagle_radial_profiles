@@ -48,7 +48,7 @@ def multi_start_fit(
         for params in variances:
 
             for name, values in params.items():
-
+                #print(name, values)
                 value, low, high = values
 
                 if low == high:
@@ -69,14 +69,28 @@ def multi_start_fit(
                     new_value = rng.uniform(low,high)
                     params[name][0] = new_value
                     print(name, new_value)
+                    continue
 
-                else:                    
-                    new_value = value * rng.uniform(1 - scatter[name],
-                                                    1 + scatter[name])
-
-                    new_value = np.clip(new_value, low, high)
-
+                if name == "r_break1":
+                    new_value = rng.uniform(low,high)
                     params[name][0] = new_value
+                    print(name, new_value)
+                    rb1 = new_value
+                    continue
+
+                if name == "r_break2":
+                    new_value = rng.uniform(rb1,high)
+                    params[name][0] = new_value
+                    print(name, new_value)
+                    continue
+                
+                             
+                new_value = value * rng.uniform(1 - scatter[name],
+                                                1 + scatter[name])
+
+                new_value = np.clip(new_value, low, high)
+
+                params[name][0] = new_value
 
         result, imfit = fit_step(
             image,
@@ -118,18 +132,34 @@ def check_correct_fit(imfit, state, shape):
     if makeimage.disk["name"] == "Exponential":
         return True
 
-    if state["functions"]["disk"]["r_break"][0] > 225:
-        print("too big rb", state["functions"]["disk"]["r_break"][0])
-        return False
+    if 'r_break' in state["functions"]["disk"]:
+        if state["functions"]["disk"]["r_break"][0] > 225:
+            print("too big rb", state["functions"]["disk"]["r_break"][0])
+            return False
 
     if state["functions"]["disk"]["h1"][0] > 100:
         print("too big h1", state["functions"]["disk"]["h1"][0])
         return False
 
-    bulge_image = makeimage.get_model_image(label="bulge", size=shape)
-    disk_image = makeimage.get_model_image(label="disk", size=shape)
+    if 'r_break1' in state["functions"]["disk"]:
+        if state["functions"]["disk"]["r_break1"][0] > state["functions"]["disk"]["r_break2"][0]:
+            print("rb1 large rb2", 'rb1', state["functions"]["disk"]["r_break1"][0],
+                   'rb2', state["functions"]["disk"]["r_break2"][0])
+            return False
 
-    bt = np.sum(bulge_image)/(np.sum(bulge_image) + np.sum(disk_image))
+        if state["functions"]["disk"]["r_break1"][0] > 250:
+            print("too large rb1", state["functions"]["disk"]["r_break1"][0])
+            return False
+        if state["functions"]["disk"]["r_break2"][0] > 250:
+            print("too large rb2", state["functions"]["disk"]["r_break2"][0])
+            return False
+
+
+
+    #bulge_image = makeimage.get_model_image(label="bulge", size=shape)
+    #disk_image = makeimage.get_model_image(label="disk", size=shape)
+
+    #bt = np.sum(bulge_image)/(np.sum(bulge_image) + np.sum(disk_image))
 
     #if bt > 0.8:
      #   print("too big bulge", bt)

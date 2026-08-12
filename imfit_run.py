@@ -47,6 +47,9 @@ for gal in gals:
                     xc=250, yc=250)
 
         state = get_fit_state(imfit)
+        print('state', state)
+        #exit()
+
         results_exp = multi_start_fit(image,
                         sigma,
                         "Sersic",

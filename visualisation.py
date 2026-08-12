@@ -3,10 +3,11 @@ import pandas as pd
 import pyimfit  # type: ignore
 from matplotlib import pyplot as plt
 from scipy.ndimage import rotate
+from astropy.visualization import (MinMaxInterval, LogStretch, ImageNormalize)
 
 from fit import get_fit_state
 from model import set_parameters_from_dict
-
+from bin.common_functions import calc_ith_isophote_radius
 
 class MakeImage:
     def __init__(self, imfit):
@@ -21,8 +22,8 @@ class MakeImage:
             label = funcs['label']
             self.labels.append(label)
 
-            self.bulge = {}
             if label == 'bulge':
+                self.bulge = {}
                 self.bulge['label'] = label
                 self.bulge['name'] = funcs['name']
                 self.bulge['parameters'] = funcs['parameters']
@@ -30,18 +31,21 @@ class MakeImage:
                 self.init_bulge()
                 self.models.append([label, self.bulge])
 
-            self.disk = {}
             if label == 'disk':
+                self.disk = {}
                 self.disk['label'] = label
-                self.disk['name'] = funcs['name']
+                if funcs['name'] == "DoubleBrokenExponential":
+                    self.disk['name'] = "doublebroken-exp"
+                else:
+                    self.disk['name'] = funcs['name']
                 self.disk['parameters'] = funcs['parameters']
                 #print(self.disk['parameters'])
                 self.disk['model'] = pyimfit.make_imfit_function(self.disk['name'], label=self.disk['label'])
                 self.init_disk()
                 self.models.append([label, self.disk])
             
-            self.bar = {}
             if label == 'bar':
+                self.bar = {}
                 self.bar['label'] = label
                 self.bar['name'] = funcs['name']   
                 self.bar['parameters'] = funcs['parameters']
@@ -99,9 +103,10 @@ class MakeImage:
 
 
 class ShowResults:
-    def __init__(self, image, fit, zp=0.0, PA=0.0, maj_axis=False):
+    def __init__(self, image, fit, zp=0.0, PA=0.0, maj_axis=False, scale=1.0):
 
         self.PA = PA
+        self.scale = scale
 
         if maj_axis:
             self.image = rotate(image, self.PA, reshape=False) 
@@ -110,6 +115,7 @@ class ShowResults:
         self.zp = zp
 
         makeimage = MakeImage(fit)
+        self.makeimage = makeimage
         self.labels = makeimage.labels
 
         self.models = {}
@@ -131,40 +137,60 @@ class ShowResults:
         self.maj_axis = maj_axis
 
 
-    def plot_cuts(self, file):
-        _fig, ax = plt.subplots(1, 2, figsize=(10,5))
+    def plot_cuts(self, file, cuts=False):
+        _fig, axs = plt.subplots(2, 3, figsize=(15,10))
         h, w = self.image.shape
-
+        ax = axs[0,:]
         zp = self.zp
         if self.maj_axis:
             ax[0].set_title('SmajA')
         else:
             ax[0].set_title('X cut')
 
-        mag = self.convert_int_to_mag(self.image[h//2,:], zp)
-        ax[0].plot(np.arange(w), mag, '-', color='grey', label='data')
-        
-        for label in self.labels:
-            mag = self.convert_int_to_mag(self.models[label][h//2, :], zp)
-            ax[0].plot(np.arange(w), mag, '-', label=label)
-        ax[0].invert_yaxis()
-        ax[0].set_ylim(30,15)
-
+        ax[0] = self.plot_x_cut(ax[0])
 
         if self.maj_axis:
             ax[1].set_title('SminA')
         else:
             ax[1].set_title('Y cut')
 
-        mag = self.convert_int_to_mag(self.image[:, w//2], zp)
-        ax[1].plot(np.arange(h), mag, '-', color='grey', label='data')
-        
-        for label in self.labels:
-            mag = self.convert_int_to_mag(self.models[label][:, w//2], zp)
-            ax[1].plot(np.arange(h), mag, '-', label=label)
-        ax[1].invert_yaxis()
-        ax[1].set_ylim(30,15)
+        ax[1] = self.plot_y_cut(ax[1])        
+
+        if cuts:
+            print('rmax1')
+            rmax_1 = calc_ith_isophote_radius(np.arange(h/2,0,-1), self.image[h//2:, w//2], zp=zp, target_mag=30.0)
+            print('rmax2')
+            rmax_2 = calc_ith_isophote_radius(np.arange(0,h/2,1), self.image[:h//2, w//2], zp=zp, target_mag=30.0)
+            print('rmax3')
+            rmax_3 = calc_ith_isophote_radius(np.arange(w/2,0,-1), self.image[h//2, :w//2], zp=zp, target_mag=30.0)
+            print('rmax4')
+            rmax_4 = calc_ith_isophote_radius(np.arange(0,w/2,1), self.image[h//2, w//2:], zp=zp, target_mag=30.0)
+            rmax = np.nanmax([rmax_1, rmax_2, rmax_3, rmax_4])
+            ax[0].set_xlim(-rmax*self.scale, rmax*self.scale)
+            ax[1].set_xlim(-rmax*self.scale, rmax*self.scale)
         #plt.show()
+
+        ax = axs[1,:]
+        norm = ImageNormalize(self.image, interval=MinMaxInterval(), stretch=LogStretch(10_000))
+        ax[0].imshow(self.image, norm=norm, origin='lower', cmap='twilight')
+        ax[1].imshow(self.models['total'], norm=norm, origin='lower', cmap='twilight')
+
+
+        residual = self.image - self.models['total']
+
+        # Берем 2% и 98% процентили
+        vmin = np.percentile(residual, 2)
+        vmax = np.percentile(residual, 98)
+
+        # Делаем симметричную шкалу относительно нуля
+        lim = max(abs(vmin), abs(vmax))
+
+        im = ax[2].imshow(residual, cmap='bwr', origin='lower', 
+                        vmin=-lim, vmax=lim)
+        ax[2].set_title('Residual')
+
+        # Правильный способ добавить colorbar
+        plt.colorbar(im, ax=ax[2], label='Difference')
         plt.savefig(file, format='jpg')
 
     def convert_int_to_mag(self, img, zp):
@@ -173,6 +199,42 @@ class ShowResults:
         mag[mask] = zp - 2.5 * np.log10(img[mask])
         return mag
 
+    def plot_y_cut(self, ax):
+
+        h, w = self.image.shape
+
+        mag = self.convert_int_to_mag(self.image[:, w//2], self.zp)
+        ax.plot(self.scale*(np.arange(h)-h/2), mag, '-', color='grey', label='data')
+                
+        for label in self.labels:
+            mag = self.convert_int_to_mag(self.models[label][:, w//2], self.zp)
+            ax.plot(self.scale*(np.arange(h)-h/2), mag, '-', label=label)
+            if label == 'disk':
+                if 'r_break' in self.makeimage.disk['parameters']:
+                    ax.axvline(self.scale*self.makeimage.disk['parameters']['r_break'][0], ls='--', color='r')
+                    ax.axvline(-self.scale*self.makeimage.disk['parameters']['r_break'][0], ls='--', color='r')
+
+        ax.invert_yaxis()
+        ax.set_ylim(30,15)
+        return ax
+
+    def plot_x_cut(self, ax):
+        h, w = self.image.shape
+
+        mag = self.convert_int_to_mag(self.image[h//2,:], self.zp)
+        ax.plot(self.scale*(np.arange(w)-w/2), mag, '-', color='grey', label='data')
+        
+        for label in self.labels:
+            mag = self.convert_int_to_mag(self.models[label][h//2, :], self.zp)
+            ax.plot(self.scale*(np.arange(w)-w/2), mag, '-', label=label)
+            if label == 'disk':
+                if 'r_break' in self.makeimage.disk['parameters']:
+                    ax.axvline(self.scale*self.makeimage.disk['parameters']['r_break'][0], ls='--', color='r')
+                    ax.axvline(-self.scale*self.makeimage.disk['parameters']['r_break'][0], ls='--', color='r')
+
+        ax.invert_yaxis()
+        ax.set_ylim(30,15)
+        return ax
 
 class FitAnalysis:
     def __init__(self, results):

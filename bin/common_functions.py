@@ -59,13 +59,14 @@ def calc_ith_isophote_radius(sma, inten, zp, target_mag):
     #                 bounds_error=False, fill_value='extrapolate')
     
     r25 = float(f(target_mag))
-    if r25<0:
-        plt.figure()
-        plt.plot(zp-2.5*np.log10(inten), sma)
-        plt.plot(np.arange(30, 20, -0.001), f(np.arange(30, 20, -0.001)))
-        print('r25 cal', f(25))
-        plt.axvline(25)
-        plt.show()
+    #if r25<0:
+        
+        #plt.figure()
+        #plt.plot(zp-2.5*np.log10(inten), sma)
+        #plt.plot(np.arange(33, 20, -0.0001), f(np.arange(33, 20, -0.0001)))
+        #print('r25 cal', f(target_mag), r25, target_mag)
+        #plt.axvline(target_mag)
+        #plt.show()
     return r25
 def AB_mag(data):
 

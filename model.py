@@ -73,6 +73,28 @@ def set_broken_disk_from_exponential(disk_model, disk_cfg, bulge_cfg, disk_fix=F
     disk.alpha.setValue(1, [1, 100], fixed=False)
     return disk
 
+
+def set_double_broken_disk_from_exponential(disk_model, disk_cfg, bulge_cfg, disk_fix=False):
+    disk = pyimfit.make_imfit_function(disk_model, label='disk')
+
+    disk = pyimfit.make_imfit_function(disk_model, label='disk')
+    disk.PA.setValue(disk_cfg["PA"][0], [-180,180], fixed=disk_fix)
+    disk.ell.setValue(disk_cfg["ell"][0], [0.01, 0.8], fixed=disk_fix)
+    disk.I_0.setValue(disk_cfg["I_0"][0], [0,1e5], fixed=disk_fix)
+
+    # заменить h на h1 и h2
+    h1  = disk_cfg["h1"][0]
+    h2  = disk_cfg["h2"][0]
+    r_break  = disk_cfg["r_break"][0]
+    re = bulge_cfg["r_e"][0]
+    disk.h1.setValue(h1, [0.1, 100], fixed=disk_fix)
+    disk.h2.setValue(h2, [0.1, 100], fixed=disk_fix)
+    disk.h3.setValue(h2, [0.1, 100], fixed=disk_fix)
+    disk.r_break1.setValue(r_break, [re*3, 250], fixed=disk_fix)
+    disk.r_break2.setValue(r_break, [re*3, 250], fixed=disk_fix)
+    #disk.alpha.setValue(1, [1, 100], fixed=False)
+    return disk
+
 def build_model(bulge_model, disk_model,
                  bulge_cfg=None, disk_cfg=None,
                  bulge_fix=False, disk_fix=False, xc=250, yc=250):
@@ -101,7 +123,15 @@ def build_model(bulge_model, disk_model,
     elif disk_model == "Exponential":
         disk = pyimfit.make_imfit_function(disk_model, label='disk')
         set_parameters_from_dict(disk, disk_cfg, disk_fix)
-            
+
+    elif disk_model == "doublebroken-exp":
+        if "h3" in disk_cfg:
+            disk = pyimfit.make_imfit_function(disk_model, label='disk')
+            set_parameters_from_dict(disk, disk_cfg, disk_fix)
+        else:
+            disk = set_double_broken_disk_from_exponential(disk_model, disk_cfg,
+                                                            bulge_cfg, disk_fix)
+
 
     # -------------------------------
     # Components

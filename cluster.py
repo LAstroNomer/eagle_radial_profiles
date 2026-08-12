@@ -12,50 +12,10 @@ from pathlib import Path
 import re
 import numpy as np
 import pyimfit
-from visualisation import ShowResults
+from visualisation import ShowResults, MakeImage
 from astropy.io import fits
 from bin.common_functions import AB_mag
 
-def parse_config_fixed( lines: List[str], labels=None) -> ModelDescription:
-    """
-    Parse an Imfit model configuration from a list of strings.
-
-    Parameters
-    ----------
-    lines : list of str
-        String representantion of Imfit model configuration.
-
-    Returns
-    -------
-    model : :class:`~imfit.ModelDescription`
-        A model description object.
-
-    See also
-    --------
-    parse_config_file
-    """
-    lines = clean_lines(lines)
-
-    model = ModelDescription()
-
-    block_start = 0
-    functionBlock_id = 0   # number of current function set
-    for i in range(block_start, len(lines)):
-        if lines[i].startswith(x0_str):
-            if block_start == 0:
-                options = read_options(lines[block_start:i])
-                model.options.update(options)
-            else:
-                # possible auto-label-generation code
-                funcSetLabel = "fs{0:d}".format(functionBlock_id)
-                funcSetLabel = ""
-                model.addFunctionSet(read_function_set(funcSetLabel, lines[block_start:i]))
-                functionBlock_id += 1
-            block_start = i
-    funcSetLabel = "fs{0:d}".format(functionBlock_id)
-    funcSetLabel = ""
-    model.addFunctionSet(read_function_set(funcSetLabel, lines[block_start:i + 1]))
-    return model
 
 
 def cluster_results(
@@ -380,20 +340,201 @@ def run_clustering(dir_path, features=None, verbouse=True):
     return clustered, summary, best
 
 
-if __name__ == '__main__':
-    from matplotlib import pyplot as plt
-    #plt.figure()
-    for i in range(28,11,-1):
-        file = f'746518_{i}'
-        dir_path = f"fits/{file}"
-        if file in ["746518_18"]:
-            continue
+import pandas as pd
 
-        clustered, summary, best = run_clustering(dir_path, verbouse=False)
+
+def make_candidates(clustered):
+
+    candidates = []
+
+    n_total = len(clustered)
+
+    for cluster, group in clustered.groupby("cluster"):
+
+        #if cluster == -1:
+        #    continue
+
+        best = group.loc[group["AIC"].idxmin()]
+
+        row = best.to_dict()
+
+        row["cluster"] = cluster
+        row["size"] = len(group)
+        row["fraction"] = len(group) / n_total
+
+        candidates.append(row)
+    
+    return (
+        pd.DataFrame(candidates)
+        .sort_values("fraction", ascending=False)
+        .reset_index(drop=True)
+    )
+
+
+def filter_candidates(candidates, delta_aic_limit=6):
+
+    if len(candidates) == 1:
+        return candidates.iloc[0]
+
+    # Кластер с минимальным AIC
+    best_aic_idx = candidates["AIC"].idxmin()
+
+    if not('fraction' in candidates):
+        return candidates.loc[0]
+    # Самый большой кластер
+    largest_idx = candidates["fraction"].idxmax()
+
+    delta_aic = (
+        candidates.loc[largest_idx, "AIC"]
+        - candidates.loc[best_aic_idx, "AIC"]
+    )
+
+    if delta_aic <= delta_aic_limit:
+        return candidates.loc[largest_idx]
+
+    return candidates.loc[best_aic_idx]
+
+
+def choose_model(image, exp_best, best_clustered):
+
+    
+    log_image = np.log10(image)
+    #log_image = np.nan_to_num(log_image)
+    log_image[np.isinf(log_image)] = np.nan
+
+    with open(f'{dir_path}/best_exp.dat', 'r') as ff:
+        lines = ff.readlines()[:-8]
+
+    model_desc = pyimfit.parse_config(lines)
+    imfit = pyimfit.Imfit(model_desc)
+    
+    exp_image = imfit.getModelImage(shape=image.shape)
+    log_exp_image = np.log10(exp_image)
+    #log_exp_image = np.nan_to_num(log_exp_image)
+    log_exp_image[np.isinf(log_exp_image)] = np.nan
+
+    with open(f'{dir_path}/{best_clustered["filename"]}', 'r') as ff:
+        lines = ff.readlines()[:-8]
+
+    model_desc = pyimfit.parse_config(lines)
+    imfit = pyimfit.Imfit(model_desc)
+    
+    best_image = imfit.getModelImage(shape=image.shape)
+    log_best_image = np.log10(best_image)
+    #log_best_image = np.nan_to_num(log_best_image)
+    log_best_image[np.isinf(log_best_image)] = np.nan
+
+    Lxi_exp   = np.nansum((log_exp_image - log_image)**2)  + 2*11 # 2*(11**2 + 11)/(500**2-11-1)
+    Lxi_best = np.nansum((log_best_image - log_image)**2)  + 2*13 #(13**2 + 13)/(500**2-13-1)
+
+    print('Xi exp', Lxi_exp, exp_best["AIC"])
+    print('Xi break', Lxi_best, best_clustered["AIC"])
+    
+ 
+    if (exp_best["AIC"]-best_clustered["AIC"] < 2) and (Lxi_exp < Lxi_best):
+        file_best = f'{dir_path}/best_exp.dat'
+    else:
+        file_best = f'{dir_path}/{best_clustered["filename"]}'
+
+    return file_best
+
+if __name__ == '__main__':
+    import subprocess as sp
+    from matplotlib import pyplot as plt
+    import shutil
+    #plt.figure()
+    gals = sorted(set([a.split('_')[0] for a in os.listdir('../images_r')]))
+    for gal in gals:
+        rb_ = []
+        h1_ = []
+        h2_ = []
+        re_ = []
+        n_  = []
+        sn = []
+        for i in range(28,11,-1):
+            file = f'{gal}_{i}'
+            dir_path = f"fits/{file}"
+            if not(os.path.exists(dir_path)):
+                continue
+            print(file)
+            if os.path.exists(f'pics_new/{file}.jpg'):
+                continue
+            clustered, summary, best = run_clustering(dir_path, verbouse=False)
+            candidates = make_candidates(clustered)
+            best_clustered = filter_candidates(candidates)
+
+            exp_best = parse_break_file(f'{dir_path}/best_exp.dat')
+            
+            image = fits.getdata(f"../images_r/{file}_face.fits")
+            print('file', file)
+            file_best = choose_model(image, exp_best, best_clustered )
+            #shutil.copy2(file_best, f'{dir_path}/best_clustered.dat')
+            #continue 
+
+            image = fits.getdata(f"../images_r/{file}_face.fits")
+            with open(file_best, 'r') as ff:
+                lines = ff.readlines()[:-8]
+            
+                    
+            model_desc = pyimfit.parse_config(lines)
+            print('lables',model_desc.functionLabelList())
+            imfit = pyimfit.Imfit(model_desc)
+            # Все публичные методы (без __магических__)
+            #methods = [m for m in dir(model_desc) if not m.startswith('_')]
+        
+            #print(imfit.getModelDescription())
+            zp = 8.9 -2.5*np.log10(AB_mag(1))
+            makeimage = MakeImage(imfit)
+            PA = makeimage.disk['parameters']['PA'][0]
+            sr = ShowResults(image, imfit, zp = zp, PA=PA, maj_axis=True, scale=0.2)
+            #sr.labels = ["bulge", "disk", "total"]
+            sr.plot_cuts(f'pics_new/{file}.jpg', cuts=True)
+            print(makeimage.bulge)
+            if 'h1' in makeimage.disk['parameters']:
+                h1_.append(makeimage.disk['parameters']["h1"][0])
+                h2_.append(makeimage.disk['parameters']["h2"][0])
+                rb_.append(makeimage.disk['parameters']["r_break"][0])
+            else:
+                h1_.append(makeimage.disk['parameters']["h"][0])
+                h2_.append(makeimage.disk['parameters']["h"][0])
+                rb_.append(float('nan'))
+            
+
+            re_.append(makeimage.bulge['parameters']['r_e'][0])
+            n_.append(makeimage.bulge['parameters']['n'][0])
+            sn.append(i)
+                
+        plt.figure() 
+        plt.subplot(2,3,1)
+        plt.title('r_break')
+        plt.plot(sn, np.array(rb_)*.2 , '-o')
+        plt.subplot(2,3,2)
+        plt.title('h1')
+        plt.plot(sn, np.array(h1_)*.2, '-o')
+        plt.subplot(2,3,3)
+        plt.title('h2')
+        plt.plot(sn, np.array(h2_)*.2, '-o')
+        plt.subplot(2,3,4)
+        plt.title('r_e')
+        plt.plot(sn, np.array(re_)*.2, '-o')
+        plt.subplot(2,3,5)
+        plt.title('n')
+        plt.plot(sn, n_, '-o')
+        plt.subplot(2,3,6)
+        plt.title('lg h1/h2')
+        plt.plot(sn, np.log(np.array(h1_)/np.array(h2_)), '-o')
+        plt.savefig(f'evo/{gal}.jpg', format='jpg')
+        
+
+        
+        
+            #sp.call(f'cp {file_best} {dir_path}/best_clustered.dat', shell=True)
+            #continue 
+        continue
+
         labels = clustered['cluster'].values 
         labels = sorted(set(labels))
         k = labels[0]
-        exp_best = parse_break_file(f'{dir_path}/best_exp.dat')
         print(summary)
         print(i)
         for k_ in np.append(np.arange(len(labels)-1), -1):
@@ -401,9 +542,9 @@ if __name__ == '__main__':
                 if exp_best["BIC"]-best["BIC"][np.int64(k_)] >= 10:
                     k = np.int64(k_)
                     break
-      
+    
 
-       
+    
         break_best = parse_break_file(f'{dir_path}/best_break.dat')
 
         #print(exp_best["BIC"])
@@ -422,20 +563,20 @@ if __name__ == '__main__':
         with open(file_best, 'r') as ff:
             lines = ff.readlines()[:-8]
 
-       
+    
         model_desc = pyimfit.parse_config(lines)
         print('lables',model_desc.functionLabelList())
         imfit = pyimfit.Imfit(model_desc)
         # Все публичные методы (без __магических__)
-        methods = [m for m in dir(model_desc) if not m.startswith('_')]
-       
-        print(imfit.getModelDescription())
+        #methods = [m for m in dir(model_desc) if not m.startswith('_')]
+    
+        #print(imfit.getModelDescription())
         zp = 8.9 -2.5*np.log10(AB_mag(1))
         sr = ShowResults(image, imfit, zp = zp)
-        sr.labels = ["bulge", "disk", "total"]
+        #sr.labels = ["bulge", "disk", "total"]
         sr.plot_cuts(f'best_pics/{file}.jpg')
 
         #print(summary)
+            
         
-    
-    #plt.savefig('r_evo.jpg', format='jpg')
+        #plt.savefig('r_evo.jpg', format='jpg')
