@@ -1,10 +1,11 @@
 import pyimfit  # type: ignore
 
 from model import build_model
-
+#from finder import multi_start_fit
 
 def fit_step(image, sigma, bulge_model, disk_model, 
-             bulge_cfg, disk_cfg, bulge_fix, disk_fix, xc, yc, **kwargs):
+             bulge_cfg, disk_cfg, bulge_fix, disk_fix, xc, yc, is_3D=False, hand_fix=None, **kwargs):
+
     model = build_model(bulge_model,
                         disk_model,
                         bulge_cfg,
@@ -12,15 +13,19 @@ def fit_step(image, sigma, bulge_model, disk_model,
                         bulge_fix,
                         disk_fix,
                         xc,
-                        yc
+                        yc,
+                        is_3D,
+                        hand_fix=hand_fix
                         )
-    result, imfit = imfit_fit(image, model, sigma, ftol=1e-8, **kwargs)
+
+    
+    result, imfit = imfit_fit(image, model, sigma,ftol=1e-6,  **kwargs)
     #print(imfit.getModelDescription())
     return result, imfit
 
 def imfit_fit(image, model, sigma, **kwargs):
     imfit = pyimfit.Imfit(model)
-    result = imfit.fit(image, error=sigma, **kwargs)
+    result = imfit.fit(image, error=sigma, verbose=1, **kwargs)
 
     return result, imfit
 
@@ -50,4 +55,5 @@ def save_imfit_to_data(result, imfit, output):
                 continue
 
             print(key, result[key], file=file)
+
 

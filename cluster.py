@@ -395,7 +395,7 @@ def filter_candidates(candidates, delta_aic_limit=6):
     return candidates.loc[best_aic_idx]
 
 
-def choose_model(image, exp_best, best_clustered):
+def choose_model(image, exp_best, best_clustered, dir_path):
 
     
     log_image = np.log10(image)
@@ -435,6 +435,17 @@ def choose_model(image, exp_best, best_clustered):
         file_best = f'{dir_path}/best_exp.dat'
     else:
         file_best = f'{dir_path}/{best_clustered["filename"]}'
+
+    return file_best
+
+
+def get_best_candidate(dir_path, image=None):
+    clustered, summary, best = run_clustering(dir_path, verbouse=False)
+    candidates = make_candidates(clustered)
+    best_clustered = filter_candidates(candidates)
+
+    exp_best = parse_break_file(f'{dir_path}/best_exp.dat')
+    file_best = choose_model(image, exp_best, best_clustered, dir_path)
 
     return file_best
 

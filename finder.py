@@ -55,7 +55,7 @@ def multi_start_fit(
                     continue
 
                 # координаты можно не трогать
-                if name in ("PA", "ell"):
+                if name in ("PA", "ell", "inc"):
                     continue
 
                 #if name == "n":
@@ -129,7 +129,7 @@ def multi_start_fit(
 def check_correct_fit(imfit, state, shape):
 
     makeimage = MakeImage(imfit)
-    if makeimage.disk["name"] == "Exponential":
+    if makeimage.disk["name"] == "Exponential" or makeimage.disk["name"] == "ExponentialDisk3D":
         return True
 
     if 'r_break' in state["functions"]["disk"]:
