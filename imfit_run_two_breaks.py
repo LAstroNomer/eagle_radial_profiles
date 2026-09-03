@@ -9,7 +9,9 @@ from finder import multi_start_fit, get_fit_state
 from model import build_model
 
 
-def fit_two_break_with_init_guess(breaked_model, image, sigma, scatter, hand_fix, is_3D=False):
+def fit_two_break_with_init_guess(breaked_model, image, sigma, scatter,
+                                   hand_fix,
+                                     is_3D=False):
     with open(breaked_model, 'r') as ff:
         lines = ff.readlines()[:-8]
                     
@@ -29,7 +31,7 @@ def fit_two_break_with_init_guess(breaked_model, image, sigma, scatter, hand_fix
                      is_3D=is_3D
                      )
     new_imfit = pyimfit.Imfit(double_break_model)
-    result = new_imfit.fit(image, error=sigma)
+    result = new_imfit.fit(image, error=sigma, ftol=1e-3, verbose=1)
 
 
     state = get_fit_state(new_imfit)
@@ -49,7 +51,7 @@ def fit_two_break_with_init_guess(breaked_model, image, sigma, scatter, hand_fix
                             state["yc"],
                             bulge_fix=False,
                             disk_fix=False,
-                            n_starts=30,
+                            n_starts=3,
                             scatter=scatter,
                             hand_fix=hand_fix,
                             is_3D=is_3D

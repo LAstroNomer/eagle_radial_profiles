@@ -5,7 +5,7 @@ from model import build_model
 
 def fit_step(image, sigma, bulge_model, disk_model, 
              bulge_cfg, disk_cfg, bulge_fix, disk_fix, xc, yc, is_3D=False, hand_fix=None, 
-            fast=False, **kwargs):
+            fast=True, **kwargs):
 
     model = build_model(bulge_model,
                         disk_model,
@@ -36,7 +36,7 @@ def imfit_fit(image, model, sigma, **kwargs):
 def fast_imfit_fit(image, model, sigma, bulge_model, disk_model, hand_fix, **kwargs):
     print('run fast')
     imfit_nm = pyimfit.Imfit(model)
-    result_nm = imfit_nm.fit(image, error=sigma, ftol=1e-6, solver='NM', verbose=1)
+    result_nm = imfit_nm.fit(image, error=sigma, ftol=1e-3, solver='NM', verbose=1)
     state = get_fit_state(imfit_nm)
     new_model = build_model(bulge_model,
                         disk_model,
@@ -50,7 +50,7 @@ def fast_imfit_fit(image, model, sigma, bulge_model, disk_model, hand_fix, **kwa
                         hand_fix=hand_fix
                         )
     imfit_lm = pyimfit.Imfit(new_model)
-    result_lm = imfit_lm.fit(image, error=sigma, ftol=1e-6, verbose=2, solver='LM')
+    result_lm = imfit_lm.fit(image, error=sigma, ftol=1e-6, verbose=1, solver='LM')
     return result_lm, imfit_lm
 
 def get_fit_state(imfit):
