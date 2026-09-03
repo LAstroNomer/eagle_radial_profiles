@@ -317,6 +317,6 @@ for gal in gals:
             best_fit_two = ShowResults(image, imfit,zp=zp)
             best_fit_two.plot_cuts(f"fits/{file}/best_clustered.jpg")
             #print('Time', time.time()-start)
-
+    break
     #exit()
             
