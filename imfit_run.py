@@ -297,7 +297,7 @@ for gal in gals:
                                         scatter, 
                                         hand_fix, 
                                         bulge_fix=bulge_fix,
-                                        is_3D=True)
+                                        is_3D=True, fast=False)
 
                 save_imfit_to_data(results[0]["fit"], results[0]["imfit"], f"fits/{file}/best_guess.dat")
 

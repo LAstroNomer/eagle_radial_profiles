@@ -20,7 +20,7 @@ def fit_step(image, sigma, bulge_model, disk_model,
                         )
 
     if fast:
-        result, imfit = fast_imfit_fit(image, model, sigma,  bulge_model, disk_model, hand_fix, **kwargs)
+        result, imfit = fast_imfit_fit(image, model, sigma,  bulge_model, disk_model, hand_fix, bulge_fix, disk_fix, is_3D, **kwargs)
     else:
         result, imfit = imfit_fit(image, model, sigma,  **kwargs)
 
@@ -33,7 +33,7 @@ def imfit_fit(image, model, sigma, **kwargs):
 
     return result, imfit
 
-def fast_imfit_fit(image, model, sigma, bulge_model, disk_model, hand_fix, **kwargs):
+def fast_imfit_fit(image, model, sigma, bulge_model, disk_model, hand_fix, bulge_fix, disk_fix, is_3D, **kwargs):
     print('run fast')
     imfit_nm = pyimfit.Imfit(model)
     result_nm = imfit_nm.fit(image, error=sigma, ftol=1e-3, solver='NM', verbose=1)
@@ -42,11 +42,11 @@ def fast_imfit_fit(image, model, sigma, bulge_model, disk_model, hand_fix, **kwa
                         disk_model,
                         state["functions"]["bulge"],
                         state["functions"]["disk"],
-                        False,
-                        False,
+                        bulge_fix,
+                        disk_fix,
                         state["xc"],
                         state["yc"],
-                        True,
+                        is_3D,
                         hand_fix=hand_fix
                         )
     imfit_lm = pyimfit.Imfit(new_model)

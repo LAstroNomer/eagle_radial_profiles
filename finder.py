@@ -22,6 +22,7 @@ def multi_start_fit(
     scatter=None,
     hand_fix=None,
     is_3D=False,
+    fast=True,
 ):
     """
     Запускает fit несколько раз со случайными начальными условиями.
@@ -107,7 +108,8 @@ def multi_start_fit(
             xc=xc,
             yc=yc,
             hand_fix=hand_fix,
-            is_3D=is_3D
+            is_3D=is_3D,
+            fast=fast,
         )
 
         state = get_fit_state(imfit)
@@ -180,7 +182,7 @@ def multy_fit_with_init_guess(guess_model,
                                 scatter, 
                                 hand_fix, 
                                 bulge_fix,
-                                is_3D=False):
+                                is_3D=False, fast=True):
     with open(guess_model, 'r') as ff:
         lines = ff.readlines()[:-8]
                     
@@ -255,7 +257,7 @@ def multy_fit_with_init_guess(guess_model,
                             n_starts=3,
                             scatter=scatter,
                             hand_fix=hand_fix,
-                            is_3D=is_3D
+                            is_3D=is_3D, fast=fast,
                             )
 
     return results
