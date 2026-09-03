@@ -1,9 +1,10 @@
 import copy
 import numpy as np
 from tqdm import tqdm
+import pyimfit
 
 from visualisation import MakeImage
-from fit import fit_step, get_fit_state
+from fit import fit_step, get_fit_state, build_model
 
 
 def multi_start_fit(
@@ -19,6 +20,8 @@ def multi_start_fit(
     disk_fix=False,
     n_starts=20,
     scatter=None,
+    hand_fix=None,
+    is_3D=False,
 ):
     """
     Запускает fit несколько раз со случайными начальными условиями.
@@ -57,7 +60,7 @@ def multi_start_fit(
                 # координаты можно не трогать
                 if name in ("PA", "ell", "inc"):
                     continue
-
+                
                 #if name == "n":
                 #    new_value = rng.uniform(0.6,4)
 
@@ -102,7 +105,9 @@ def multi_start_fit(
             bulge_fix=bulge_fix,
             disk_fix=disk_fix,
             xc=xc,
-            yc=yc
+            yc=yc,
+            hand_fix=hand_fix,
+            is_3D=is_3D
         )
 
         state = get_fit_state(imfit)
@@ -168,6 +173,91 @@ def check_correct_fit(imfit, state, shape):
     return True
 
     
+
+def multy_fit_with_init_guess(guess_model, 
+                                image, 
+                                sigma, 
+                                scatter, 
+                                hand_fix, 
+                                is_3D=False):
+    with open(guess_model, 'r') as ff:
+        lines = ff.readlines()[:-8]
+                    
+                            
+    model_desc = pyimfit.parse_config(lines)
+    imfit = pyimfit.Imfit(model_desc)
+    state = get_fit_state(imfit)
+    
+    for line in lines:
+        if 'LABEL' in line:
+            line_list = line.split()
+            if line_list[-1] == 'bulge':
+                bulge_model = line_list[1]
+            if line_list[-1] == 'disk':
+                disk_model  = line_list[1]
+    
+    double_break_model = build_model(bulge_model, disk_model,
+                     bulge_cfg=state["functions"]["bulge"], 
+                     disk_cfg=state["functions"]["disk"],
+                     bulge_fix=False, disk_fix=False, 
+                     xc=state["xc"],
+                     yc=state["yc"],
+                     hand_fix=hand_fix,
+                     is_3D=is_3D
+                     )
+    new_imfit = pyimfit.Imfit(double_break_model)
+    result = new_imfit.fit(image, error=sigma)
+
+
+    state = get_fit_state(new_imfit)
+    state["functions"]["bulge"]['PA'] += [-180,180]
+    state["functions"]["bulge"]['ell'] += [0.01,0.8]
+    state["functions"]["bulge"]['r_e'] += [0.1,25]
+    state["functions"]["bulge"]['I_e'] += [0,1e5]
+    state["functions"]["bulge"]['n'] += [0.5,5]
+
+    re = state["functions"]["bulge"]["r_e"][0]
+    state["functions"]["disk"]['PA'] += [-180,180]
+    if 'ell' in state['functions']['disk']:
+        state["functions"]["disk"]['ell'] += [0.01,0.8]
+    else:
+        state["functions"]["disk"]['inc'] += [0,90]
+        state["functions"]["disk"]['J_0'] += [0,1e5]
+        if 'h1' in state['functions']['disk']:
+            state["functions"]["disk"]['h1'] += [0,250]
+            state["functions"]["disk"]['h2'] += [0,250]
+            state["functions"]["disk"]['r_break'] += [3*re,128]
+        else:
+            state["functions"]["disk"]['h'] += [0,250]
+
+        if 'h3' in state['functions']['disk']:
+            state["functions"]["disk"]['h3'] += [0,250]
+            state["functions"]["disk"]['r_break1'] += [3*re,128]
+            state["functions"]["disk"]['r_break2'] += [3*re,128]
+
+
+        state["functions"]["disk"]['n'] += [1,100]
+        state["functions"]["disk"]['z_0'] += [0,128]
+
+    print(state)
+    #exit()
+        
+    results = multi_start_fit(image, sigma,
+                            bulge_model,
+                            disk_model,
+                            state["functions"]["bulge"],
+                            state["functions"]["disk"],
+                            state["xc"],
+                            state["yc"],
+                            bulge_fix=False,
+                            disk_fix=False,
+                            n_starts=30,
+                            scatter=scatter,
+                            hand_fix=hand_fix,
+                            is_3D=is_3D
+                            )
+
+    return results
 
 
 

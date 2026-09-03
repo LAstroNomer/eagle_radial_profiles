@@ -9,7 +9,7 @@ from finder import multi_start_fit, get_fit_state
 from model import build_model
 
 
-def fit_two_break_with_init_guess(breaked_model, image, sigma, scatter):
+def fit_two_break_with_init_guess(breaked_model, image, sigma, scatter, hand_fix, is_3D=False):
     with open(breaked_model, 'r') as ff:
         lines = ff.readlines()[:-8]
                     
@@ -19,12 +19,15 @@ def fit_two_break_with_init_guess(breaked_model, image, sigma, scatter):
     state = get_fit_state(imfit)
 
     
-    double_break_model = build_model("Sersic", "doublebroken-exp",
+    double_break_model = build_model("Sersic", "DblBknExp3D",
                      bulge_cfg=state["functions"]["bulge"], 
                      disk_cfg=state["functions"]["disk"],
                      bulge_fix=False, disk_fix=False, 
                      xc=state["xc"],
-                     yc=state["yc"])
+                     yc=state["yc"],
+                     hand_fix=hand_fix,
+                     is_3D=is_3D
+                     )
     new_imfit = pyimfit.Imfit(double_break_model)
     result = new_imfit.fit(image, error=sigma)
 
@@ -39,7 +42,7 @@ def fit_two_break_with_init_guess(breaked_model, image, sigma, scatter):
         
     results = multi_start_fit(image, sigma,
                             "Sersic",
-                            "doublebroken-exp",
+                            "DblBknExp3D",
                             state["functions"]["bulge"],
                             state["functions"]["disk"],
                             state["xc"],
@@ -47,7 +50,10 @@ def fit_two_break_with_init_guess(breaked_model, image, sigma, scatter):
                             bulge_fix=False,
                             disk_fix=False,
                             n_starts=30,
-                            scatter=scatter)
+                            scatter=scatter,
+                            hand_fix=hand_fix,
+                            is_3D=is_3D
+                            )
 
     return results
 
@@ -144,7 +150,7 @@ if __name__ == '__main__':
                             state["yc"],
                             bulge_fix=False,
                             disk_fix=False,
-                            n_starts=30,
+                            n_starts=3,
                             scatter=scatter)
 
             #fit_an = FitAnalysis(results)

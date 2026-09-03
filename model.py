@@ -74,7 +74,7 @@ def set_broken_disk_from_exponential(disk_model, disk_cfg, bulge_cfg, disk_fix=F
     re = bulge_cfg["r_e"][0]
     disk.h1.setValue(h, [0.1*h, 10*h], fixed=disk_fix)
     disk.h2.setValue(h, [0.1*h, 10*h], fixed=disk_fix)
-    disk.r_break.setValue(3*h, [re*3, 250], fixed=disk_fix)
+    disk.r_break.setValue(3*h, [re*3, 128], fixed=disk_fix)
 
     if is_3D:
         disk.J_0.setValue(disk_cfg["J_0"][0], disk_cfg["J_0"][1:], fixed=disk_fix)
@@ -108,8 +108,8 @@ def set_double_broken_disk_from_exponential(
     disk.h1.setValue(h1, [0.1, 100], fixed=disk_fix)
     disk.h2.setValue(h2, [0.1, 100], fixed=disk_fix)
     disk.h3.setValue(h2, [0.1, 100], fixed=disk_fix)
-    disk.r_break1.setValue(r_break, [re*3, 250], fixed=disk_fix)
-    disk.r_break2.setValue(r_break, [re*3, 250], fixed=disk_fix)
+    disk.r_break1.setValue(r_break, [re*3, 128], fixed=disk_fix)
+    disk.r_break2.setValue(r_break, [re*3, 128], fixed=disk_fix)
     #disk.alpha.setValue(1, [1, 100], fixed=False)
     if is_3D:
         disk.J_0.setValue(disk_cfg["J_0"][0], [0, 1e5], fixed=disk_fix)
@@ -159,10 +159,10 @@ def build_model(bulge_model, disk_model,
     elif disk_model == "doublebroken-exp" or disk_model == 'DblBknExp3D':
         if "h3" in disk_cfg:
             disk = pyimfit.make_imfit_function(disk_model, label='disk')
-            set_parameters_from_dict(disk, disk_cfg, disk_fix, is_3D=is_3D)
+            set_parameters_from_dict(disk, disk_cfg, disk_fix)
         else:
             disk = set_double_broken_disk_from_exponential(disk_model, disk_cfg,
-                                                            bulge_cfg, disk_fix)
+                                                            bulge_cfg, disk_fix,is_3D=is_3D)
     if not(hand_fix is None):
         for key, value in hand_fix.items():
             getattr(disk,key).setValue(value[0], fixed=value[1])

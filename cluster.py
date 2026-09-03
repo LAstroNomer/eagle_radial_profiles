@@ -53,7 +53,8 @@ def cluster_results(
     best : DataFrame
         Лучший фит (минимальный chi2) в каждом кластере.
     """
-
+    results_clean = results.copy()
+    #print(results_clean.to_csv('tab.csv'))
     if features is None:
         excluded = {
             "chi2",
@@ -65,11 +66,11 @@ def cluster_results(
         }
 
         features = [
-            c for c in results.columns
+            c for c in results_clean.columns
             if c not in excluded
         ]
-
-    X = results[features].copy()
+    #print(results_clean.to_csv('tab.csv'))
+    X = results_clean[features].copy()
 
     scaler = StandardScaler()
     X = scaler.fit_transform(X)
@@ -81,33 +82,51 @@ def cluster_results(
 
     labels = db.fit_predict(X)
 
-    clustered = results.copy()
+    clustered = results_clean.copy()
     clustered["cluster"] = labels
+    #if 'disk_r_break' in clustered.columns:
+    #    summary = (
+    #    clustered
+    #    .groupby("cluster")
+    #    .agg(
+    #        size=("cluster", "size"),
+    #        chi2=("chi2", "min"),
+    #        BIC=("BIC", "min"),
+    #        r_break=("disk_r_break", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
+    #        h1=("disk_h1", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
+    #        h2=("disk_h2", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
+    #        r_e=("bulge_r_e", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
+    #        n=("bulge_n", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
+    #    )
+    #    .sort_values("size", ascending=False)
+    #    )
+    #else:
+    #    summary = (
+    #    clustered
+    #    .groupby("cluster")
+    #    .agg(
+    #        size=("cluster", "size"),
+    #        chi2=("chi2", "min"),
+    #        BIC=("BIC", "min"),
+    #        r_break1=("disk_r_break1", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
+    #        r_break2=("disk_r_break2", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
+    #        h1=("disk_h1", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
+    #        h2=("disk_h2", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
+    #        h3=("disk_h3", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
+    #        r_e=("bulge_r_e", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
+    #        n=("bulge_n", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
+    #    )
+    #    .sort_values("size", ascending=False)
+    #    )
 
-    summary = (
-        clustered
-        .groupby("cluster")
-        .agg(
-            size=("cluster", "size"),
-            chi2=("chi2", "min"),
-            BIC=("BIC", "min"),
-            r_break=("disk_r_break", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
-            h1=("disk_h1", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
-            h2=("disk_h2", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
-            r_e=("bulge_r_e", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
-            n=("bulge_n", lambda x: x.loc[clustered.loc[x.index, "chi2"].idxmin()]),
-        )
-        .sort_values("size", ascending=False)
-    )
+    #best = (
+    #    clustered
+    #    .sort_values("chi2")
+    #    .groupby("cluster")
+    #    .first()
+    #)
 
-    best = (
-        clustered
-        .sort_values("chi2")
-        .groupby("cluster")
-        .first()
-    )
-
-    return clustered, summary, best
+    return clustered#, summary, best
 
 def parse_break_file(filepath):
     """
@@ -135,6 +154,7 @@ def parse_break_file(filepath):
         line = line.strip()
         if not line:
             continue
+        
         
         # Определяем текущую функцию и её метку
         if line.upper().startswith('FUNCTION'):
@@ -290,7 +310,7 @@ def load_break_files_from_directory(directory, pattern="break_*.dat", verbouse=T
     converged_count = df['fitConverged'].sum() if 'fitConverged' in df.columns else len(df)
     if verbouse:
         print(f"Сошедшихся решений: {converged_count} из {len(df)}")
-    
+    #print('df', df)
     return df
 
 
@@ -321,23 +341,37 @@ def prepare_dataframe_for_clustering(df, keep_converged_only=True, verbouse=True
     return df_prepared
 
 
-def run_clustering(dir_path, features=None, verbouse=True):
-    df = load_break_files_from_directory(dir_path, verbouse=verbouse)
+def run_clustering(dir_path, features=None, pattern='', verbouse=True):
+    df = load_break_files_from_directory(dir_path,pattern=pattern, verbouse=verbouse)
+    df = df.replace('nan', np.nan)
+    df = df.dropna()
+    print(df.to_csv('tab.csv'))
     df_clean = prepare_dataframe_for_clustering(df, verbouse=verbouse)
 
 
     if features is None:
-        features = [
+        if 'double' in pattern:
+            features = [
+            "bulge_n",
+            "bulge_r_e",
+            "disk_h1",
+            "disk_h2",
+            "disk_h3",
+            "disk_r_break1",
+            "disk_r_break2"
+            ]
+        else:
+            features = [
             "bulge_n",
             "bulge_r_e",
             "disk_h1",
             "disk_h2",
             "disk_r_break"
-        ]
+            ]
 
-    clustered, summary, best = cluster_results(df_clean, features=features)
+    clustered= cluster_results(df_clean, features=features)
 
-    return clustered, summary, best
+    return clustered
 
 
 import pandas as pd
@@ -348,13 +382,13 @@ def make_candidates(clustered):
     candidates = []
 
     n_total = len(clustered)
-
+    print(clustered["AIC"])
     for cluster, group in clustered.groupby("cluster"):
 
         #if cluster == -1:
         #    continue
-
-        best = group.loc[group["AIC"].idxmin()]
+        #print(group["aic"])
+        best = group.loc[group["aic"].idxmin()]
 
         row = best.to_dict()
 
@@ -395,7 +429,7 @@ def filter_candidates(candidates, delta_aic_limit=6):
     return candidates.loc[best_aic_idx]
 
 
-def choose_model(image, exp_best, best_clustered, dir_path):
+def choose_model(image, exp_best, best_break, dir_path, best_double=None):
 
     
     log_image = np.log10(image)
@@ -413,41 +447,68 @@ def choose_model(image, exp_best, best_clustered, dir_path):
     #log_exp_image = np.nan_to_num(log_exp_image)
     log_exp_image[np.isinf(log_exp_image)] = np.nan
 
-    with open(f'{dir_path}/{best_clustered["filename"]}', 'r') as ff:
+    with open(f'{dir_path}/{best_break["filename"]}', 'r') as ff:
         lines = ff.readlines()[:-8]
 
     model_desc = pyimfit.parse_config(lines)
     imfit = pyimfit.Imfit(model_desc)
     
-    best_image = imfit.getModelImage(shape=image.shape)
-    log_best_image = np.log10(best_image)
+    best_break_image = imfit.getModelImage(shape=image.shape)
+    log_best_break_image = np.log10(best_break_image)
     #log_best_image = np.nan_to_num(log_best_image)
-    log_best_image[np.isinf(log_best_image)] = np.nan
+    log_best_break_image[np.isinf(log_best_break_image)] = np.nan
 
-    Lxi_exp   = np.nansum((log_exp_image - log_image)**2)  + 2*11 # 2*(11**2 + 11)/(500**2-11-1)
-    Lxi_best = np.nansum((log_best_image - log_image)**2)  + 2*13 #(13**2 + 13)/(500**2-13-1)
+    if best_double is None:
+        best_double = best_break
+
+
+    with open(f'{dir_path}/{best_double["filename"]}', 'r') as ff:
+        lines = ff.readlines()[:-8]
+
+    model_desc = pyimfit.parse_config(lines)
+    imfit = pyimfit.Imfit(model_desc)
+    
+    best_double_image = imfit.getModelImage(shape=image.shape)
+    log_best_double_image = np.log10(best_double_image)
+    #log_best_image = np.nan_to_num(log_best_image)
+    log_best_double_image[np.isinf(log_best_double_image)] = np.nan
+
+
+
+    Lxi_exp   = np.nansum((log_exp_image - log_image)**2)  + 2*13 # 2*(11**2 + 11)/(500**2-11-1)
+    Lxi_best_break = np.nansum((log_best_break_image - log_image)**2)  + 2*15 #(13**2 + 13)/(500**2-13-1)
+    Lxi_best_double = np.nansum((log_best_double_image - log_image)**2)  + 2*17 #(13**2 + 13)/(500**2-13-1)
 
     print('Xi exp', Lxi_exp, exp_best["AIC"])
-    print('Xi break', Lxi_best, best_clustered["AIC"])
-    
+    print('Xi break', Lxi_best_break, best_break["AIC"])
+    print('Xi double', Lxi_best_double, best_double["AIC"])
+    #print('best_break', best_break)    
  
-    if (exp_best["AIC"]-best_clustered["AIC"] < 2) and (Lxi_exp < Lxi_best):
-        file_best = f'{dir_path}/best_exp.dat'
+    if (exp_best["AIC"]-best_break["AIC"] < 2) and (Lxi_exp < Lxi_best_break):
+        if (exp_best["AIC"]-best_double["AIC"] < 2) and (Lxi_exp < Lxi_best_double):
+            file_best = f'{dir_path}/best_exp.dat'
+            return file_best
+
+   
+    if (best_break["AIC"]-best_double["AIC"] < 2) and (Lxi_best_break < Lxi_best_double):
+        file_best = f'{dir_path}/{best_break["filename"]}'
+        return file_best
+
     else:
-        file_best = f'{dir_path}/{best_clustered["filename"]}'
+        file_best = f'{dir_path}/{best_double["filename"]}'      
+        return file_best
 
-    return file_best
 
 
-def get_best_candidate(dir_path, image=None):
-    clustered, summary, best = run_clustering(dir_path, verbouse=False)
+def get_best_candidate(dir_path, pattern='', image=None):
+    clustered = run_clustering(dir_path, pattern=pattern, verbouse=False)
     candidates = make_candidates(clustered)
     best_clustered = filter_candidates(candidates)
 
-    exp_best = parse_break_file(f'{dir_path}/best_exp.dat')
-    file_best = choose_model(image, exp_best, best_clustered, dir_path)
+    #exp_best = parse_break_file(f'{dir_path}/best_exp.dat')
+    #file_best = choose_model(image, exp_best, best_clustered, dir_path)
 
-    return file_best
+    return best_clustered
 
 if __name__ == '__main__':
     import subprocess as sp
@@ -467,7 +528,7 @@ if __name__ == '__main__':
             dir_path = f"fits/{file}"
             if not(os.path.exists(dir_path)):
                 continue
-            print(file)
+            #print(file)
             if os.path.exists(f'pics_new/{file}.jpg'):
                 continue
             clustered, summary, best = run_clustering(dir_path, verbouse=False)

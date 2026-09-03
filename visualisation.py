@@ -213,6 +213,11 @@ class ShowResults:
                 if 'r_break' in self.makeimage.disk['parameters']:
                     ax.axvline(self.scale*self.makeimage.disk['parameters']['r_break'][0], ls='--', color='r')
                     ax.axvline(-self.scale*self.makeimage.disk['parameters']['r_break'][0], ls='--', color='r')
+                elif 'r_break1' in self.makeimage.disk['parameters']:
+                    ax.axvline(self.scale*self.makeimage.disk['parameters']['r_break1'][0], ls='--', color='r')
+                    ax.axvline(-self.scale*self.makeimage.disk['parameters']['r_break1'][0], ls='--', color='r')
+                    ax.axvline(self.scale*self.makeimage.disk['parameters']['r_break2'][0], ls='--', color='r')
+                    ax.axvline(-self.scale*self.makeimage.disk['parameters']['r_break2'][0], ls='--', color='r')
 
         ax.invert_yaxis()
         ax.set_ylim(30,15)
@@ -263,7 +268,7 @@ class FitAnalysis:
                 "h1": disk["h1"][0],
                 "h2": disk["h2"][0],
                 "r_break": disk["r_break"][0],
-                "alpha": disk["alpha"][0],
+                #"alpha": disk["alpha"][0],
             })
 
         self.df = pd.DataFrame(rows).sort_values("chi2")
