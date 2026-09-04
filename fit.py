@@ -5,8 +5,10 @@ from model import build_model
 
 def fit_step(image, sigma, bulge_model, disk_model, 
              bulge_cfg, disk_cfg, bulge_fix, disk_fix, xc, yc, is_3D=False, hand_fix=None, 
-            fast=True, add_halo=False, halo_cfg=None, halo_fix=False, mask=None, **kwargs):
+            fast=True, add_halo=False, halo_cfg=None, halo_fix=False, mask=None, 
+            add_bar=False, bar_cfg=None, bar_fix=False, **kwargs):
 
+    '''
     if not(add_halo):
         model = build_model(bulge_model,
                         disk_model,
@@ -19,22 +21,26 @@ def fit_step(image, sigma, bulge_model, disk_model,
                         is_3D,
                         hand_fix=hand_fix
                         )
-    else:
-        print('add halo', halo_fix)
-        model = build_model(bulge_model,
-                                disk_model,
-                                bulge_cfg,
-                                disk_cfg,
-                                bulge_fix,
-                                disk_fix,
-                                xc,
-                                yc,
-                                is_3D,
-                                hand_fix=hand_fix, 
-                                halo_cfg=halo_cfg, 
-                                add_halo=True,
-                                halo_fix=halo_fix,
-        )
+    '''
+    #else:
+    #print('add halo', halo_fix)
+    model = build_model(bulge_model,
+                            disk_model,
+                            bulge_cfg,
+                            disk_cfg,
+                            bulge_fix,
+                            disk_fix,
+                            xc,
+                            yc,
+                            is_3D,
+                            hand_fix=hand_fix, 
+                            halo_cfg=halo_cfg, 
+                            add_halo=add_halo,
+                            halo_fix=halo_fix,
+                            add_bar=add_bar,
+                            bar_cfg=bar_cfg,
+                            bar_fix=bar_fix,
+                            )
 
     if fast:
         result, imfit = fast_imfit_fit(image, model, sigma,  bulge_model, disk_model, hand_fix, bulge_fix, disk_fix, is_3D, mask=mask, **kwargs)
@@ -47,7 +53,7 @@ def fit_step(image, sigma, bulge_model, disk_model,
 
 def imfit_fit(image, model, sigma, mask, **kwargs):
     imfit = pyimfit.Imfit(model)
-    result = imfit.fit(image, error=sigma,ftol=1e-4, verbose=1, mask=mask, **kwargs)
+    result = imfit.fit(image, error=sigma,ftol=1e-6, verbose=1, mask=mask, **kwargs)
 
     return result, imfit
 

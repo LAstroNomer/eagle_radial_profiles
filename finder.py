@@ -25,6 +25,9 @@ def multi_start_fit(
     fast=True,
     halo_cfg=None,
     halo_fix=True,
+    bar_cfg=None,
+    bar_fix=False,
+    add_bar=True,
 ):
     """
     Запускает fit несколько раз со случайными начальными условиями.
@@ -115,6 +118,9 @@ def multi_start_fit(
             halo_cfg=halo_cfg,
             halo_fix=halo_fix,
             add_halo=not(halo_cfg is None), 
+            bar_cfg=bar_cfg,
+            bar_fix=bar_fix,
+            add_bar=add_bar,
         )
 
         state = get_fit_state(imfit)
@@ -191,7 +197,10 @@ def multy_fit_with_init_guess(guess_model,
                                 fast=True,
                                 halo_fix=True,
                                 halo_cfg=None,
-                                add_halo=True):
+                                add_halo=True,
+                                add_bar=True,
+                                bar_cfg=None,
+                                bar_fix=None):
     with open(guess_model, 'r') as ff:
         lines = ff.readlines()[:-8]
                     
@@ -219,6 +228,9 @@ def multy_fit_with_init_guess(guess_model,
                      add_halo=add_halo,
                      halo_cfg=halo_cfg,
                      halo_fix=halo_fix,
+                     add_bar=add_bar,
+                     bar_cfg=bar_cfg,
+                     bar_fix=bar_fix,
                      )
     new_imfit = pyimfit.Imfit(double_break_model)
     result = new_imfit.fit(image, error=sigma, ftol=1e-4, verbose=1)
@@ -272,6 +284,9 @@ def multy_fit_with_init_guess(guess_model,
                             is_3D=is_3D, fast=fast,
                             halo_cfg=halo_cfg,
                             halo_fix=halo_fix,
+                            add_bar=add_bar,
+                            bar_cfg=bar_cfg,
+                            bar_fix=bar_fix,
                             )
 
     return results

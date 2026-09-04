@@ -18,6 +18,7 @@ from fit import (
 from imfit_run_two_breaks import fit_two_break_with_init_guess
 from visualisation import FitAnalysis, ShowResults
 from halo_component import get_halo_model
+from bar_component import get_bar_model
 
 scatter = {
     "I_0": 0.5,
@@ -48,14 +49,14 @@ print(no_bar)
 # -------------------------------
 # Read image
 # -------------------------------\
-path = '/media/android/astro/images_auriga_r' # Путь до папки с изображениями
+path = '../images_auriga_r' #'/media/android/astro/images_auriga_r' # Путь до папки с изображениями
 incs = [0, 25, 36, 45, 53, 60, 66, 72, 78, 84, 90] # углы наклона
 gals = sorted(set([a.split('_')[0] for a in os.listdir(path)])) # список моделей
 
 for gal in gals:
 
     # Сначала только галактики без бара
-    if not(gal in no_bar):
+    if (gal in no_bar):
         continue
     if gal in ['Au29', 'Au30']:
         continue
@@ -71,17 +72,33 @@ for gal in gals:
         print(file)
         if not(os.path.exists(f'fits/{file}')):
             sp.call(f"mkdir fits/{file}", shell=True)
-
+      
         if j == 0:
             # ----------------------------------------------
             # Fit Halo 
             # ----------------------------------------------
-            halo_cfg, z0 = get_halo_model(hand_fix={"inc":[90,True], "PA":[90,True]}, gal=gal, path=path)
+            halo_cfg, z0 = get_halo_model(hand_fix={
+                'disk':{"inc":[90,True], "PA":[90,True]}}, gal=gal, path=path)
             ell_0 = halo_cfg['ell'][0]
             I_e0 = halo_cfg['I_e'][0]
+        
+        if j == 0:
+            # ----------------------------------------------
+            # Fit Bar 
+            # ----------------------------------------------
+            bar_cfg = get_bar_model(hand_fix={
+                                    'disk': {
+                                            "inc":[0,True],
+                                            "PA":[90,False],
+                                             "z_0":[1,True],
+                                           },}
+                                   , gal=gal, path=path)
 
-
+            #ell_0 = halo_cfg['ell'][0]
+            #I_e0 = halo_cfg['I_e'][0]
+        
         # Поправки за ориентацию гало
+        
         ell = 1 - np.sqrt(ell_0*(2-ell_0) * np.cos(np.radians(j))**2 + (1-ell_0)**2)
         halo_cfg['ell'][0] = ell
 
@@ -113,10 +130,12 @@ for gal in gals:
 
             # Fix parameters
             hand_fix = {
+                'disk':{
                 "inc":[j,True],
                 #"n":[1,True],
                 "z_0":[z0, True],
                 "PA": [90, False]
+            }
             }
 
             # Bule + Exp Disk
@@ -124,10 +143,11 @@ for gal in gals:
                 result, imfit = fit_step(image, sigma, bulge_model="Sersic", disk_model="ExponentialDisk3D", 
                             bulge_cfg=None, disk_cfg=None, bulge_fix=False, disk_fix=False,
                             xc=xc, yc=yc, is_3D=True, add_halo=True, halo_cfg=halo_cfg, halo_fix=True,
-                            hand_fix=hand_fix, fast=False)
+                            hand_fix=hand_fix, fast=False, add_bar=True, bar_cfg=bar_cfg, bar_fix=True)
                 simple_exp = ShowResults(image, imfit, zp=zp)
                 simple_exp.plot_cuts(f"fits/{file}/simple_exp.jpg")
                 save_imfit_to_data(result, imfit, f"fits/{file}/simple_exp.dat")
+               
 
                 state = get_fit_state(imfit)
                 
@@ -141,13 +161,16 @@ for gal in gals:
                                 state["yc"],
                                 bulge_fix=False,
                                 disk_fix=False,
-                                n_starts=30,
+                                n_starts=10,
                                 scatter=scatter,
                                 hand_fix=hand_fix,
                                 is_3D=True,
                                 fast=False,
                                 halo_cfg=halo_cfg, 
                                 halo_fix=True,
+                                add_bar=True,
+                                bar_cfg=bar_cfg,
+                                bar_fix=True,
                             )  
 
                 best_exp = results_exp[0]['imfit']
@@ -158,7 +181,7 @@ for gal in gals:
                 simple_exp.plot_cuts(f"fits/{file}/best_exp.jpg")
                 for i, res in enumerate(results_exp):
                     save_imfit_to_data(res["fit"], res["imfit"], f"fits/{file}/exp_{i}.dat")
-            
+                exit()
 
             #exit()
 
@@ -215,7 +238,7 @@ for gal in gals:
                                 state["yc"],
                                 bulge_fix=False,
                                 disk_fix=False,
-                                n_starts=30,
+                                n_starts=10,
                                 scatter=scatter,
                                 hand_fix=hand_fix,
                                 is_3D=True,

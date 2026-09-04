@@ -37,7 +37,7 @@ def init_default_bulge(bulge_model, bulge_fix=False):
     bulge = pyimfit.make_imfit_function(bulge_model, label='bulge')
 
     bulge.PA.setValue(90,[0,180], fixed=bulge_fix)
-    bulge.ell.setValue(0.2, [0.01,0.7], fixed=bulge_fix)
+    bulge.ell.setValue(0.2, [0.0,0.7], fixed=bulge_fix)
     bulge.I_e.setValue(100, [0, 10**5], fixed=bulge_fix)
     bulge.r_e.setValue(5, [0.1, 3], fixed=bulge_fix)
     bulge.n.setValue(1,[0.5,4], fixed=bulge_fix)
@@ -70,6 +70,21 @@ def init_default_disk(disk_model, disk_fix=False, is_3D=False):
         disk.I_0.setValue(20, [0,10**5], fixed=disk_fix)
 
     return disk
+
+def init_default_bar(bar_model, bar_fix, is_3D=True):
+    bar = pyimfit.make_imfit_function(bar_model, label='bar')
+
+    bar.PA.setValue(90, [-180, 180], fixed=bar_fix)
+    bar.inc.setValue(0, [0, 90], fixed=bar_fix)
+    bar.barPA.setValue(45, [0, 180], fixed=bar_fix)
+
+    bar.J_0.setValue(100, [0, 1e5], fixed=bar_fix)
+    bar.R_bar.setValue(10, [1, 25], fixed=bar_fix)
+    bar.q.setValue(0.3, [0.1, 0.5], fixed=bar_fix)
+    bar.q_z.setValue(0.3, [0.1, 0.5], fixed=bar_fix)
+    bar.n.setValue(2, fixed=True)
+    return bar
+
 
 
 
@@ -136,19 +151,37 @@ def set_double_broken_disk_from_exponential(
 
     return disk
 
-def build_model(bulge_model, disk_model,
-                 bulge_cfg=None, disk_cfg=None,
-                 bulge_fix=False, disk_fix=False, xc=250, yc=250,
-                   is_3D=False, hand_fix=None, add_halo=False, halo_cfg=None, halo_fix=False):
+def build_model(bulge_model, 
+                disk_model,
+                bulge_cfg=None,
+                disk_cfg=None,
+                bulge_fix=False,
+                disk_fix=False,
+                xc=250,
+                yc=250,
+                is_3D=False,
+                hand_fix=None,
+                add_halo=False,
+                halo_cfg=None,
+                halo_fix=False,
+                bar_cfg=None,
+                add_bar=False,
+                bar_fix=False,
+                ):
+
     #print('halo_fix', halo_fix)
     # -------------------------------
     # Bulge
     # -------------------------------
+
     if bulge_cfg is None:
        bulge = init_default_bulge(bulge_model, bulge_fix=bulge_fix)
     else:
         bulge = pyimfit.make_imfit_function(bulge_model, label='bulge')
         set_parameters_from_dict(bulge, bulge_cfg, bulge_fix)
+    if 'bulge' in hand_fix:
+        for key, value in hand_fix['bulge'].items():
+            getattr(bulge,key).setValue(value[0], fixed=value[1])
 
 
     # -------------------------------
@@ -175,7 +208,7 @@ def build_model(bulge_model, disk_model,
             disk = set_double_broken_disk_from_exponential(disk_model, disk_cfg,
                                                             bulge_cfg, disk_fix,is_3D=is_3D)
     if not(hand_fix is None):
-        for key, value in hand_fix.items():
+        for key, value in hand_fix['disk'].items():
             getattr(disk,key).setValue(value[0], fixed=value[1])
     disk.n.setValue(1, fixed=True)
 
@@ -191,6 +224,24 @@ def build_model(bulge_model, disk_model,
             if halo_fix:
                 #halo.ell.setValue(halo_cfg['ell'][0], [halo_cfg['ell'][1], halo_cfg['ell'][2]], fixed=False )
                 halo.I_e.setValue(halo_cfg['I_e'][0], [halo_cfg['I_e'][1], halo_cfg['I_e'][0]], fixed=False )
+    
+    # --------------------------------
+    # Bar
+    # --------------------------------
+    if add_bar:
+        print('Add Bar')
+        print(bar_cfg)
+        if bar_cfg is None:
+            bar = init_default_bar('FerrersBar3D', bar_fix)
+        else:
+            bar = pyimfit.make_imfit_function('FerrersBar3D', label='bar')
+            set_parameters_from_dict(bar, bar_cfg, bar_fix)
+            if bar_fix:
+                #halo.ell.setValue(halo_cfg['ell'][0], [halo_cfg['ell'][1], halo_cfg['ell'][2]], fixed=False )
+                bar.q_z.setValue(bar_cfg['q_z'][0], [bar_cfg['q_z'][1], bar_cfg['q_z'][2]], fixed=False )
+    
+    
+    
     # -------------------------------
     # Components
     # -------------------------------
@@ -201,4 +252,6 @@ def build_model(bulge_model, disk_model,
     model.addFunction(disk)
     if add_halo:
         model.addFunction(halo)
+    if add_bar:
+        model.addFunction(bar)
     return model

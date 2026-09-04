@@ -30,7 +30,7 @@ def get_halo_model(hand_fix, gal, path):
     result, imfit = fit_step(image, sigma, bulge_model="Sersic", disk_model="ExponentialDisk3D", 
                                 bulge_cfg=None, disk_cfg=None, bulge_fix=False, disk_fix=False,
                                 xc=xc, yc=yc, is_3D=True, 
-                                hand_fix=hand_fix, add_halo=False, halo_cfg=None, fast=True)
+                                hand_fix=hand_fix, add_halo=False, halo_cfg=None, fast=False)
 
     mask = np.zeros_like(image, dtype=bool)
     print(imfit.getModelAsDict().keys())
