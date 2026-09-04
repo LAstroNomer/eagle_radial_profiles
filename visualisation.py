@@ -31,6 +31,15 @@ class MakeImage:
                 self.init_bulge()
                 self.models.append([label, self.bulge])
 
+            if label == 'halo':
+                self.halo = {}
+                self.halo['label'] = label
+                self.halo['name'] = funcs['name']
+                self.halo['parameters'] = funcs['parameters']
+                self.halo['model'] = pyimfit.make_imfit_function(self.halo['name'], label=self.halo['label'])
+                self.init_halo()
+                self.models.append([label, self.halo])
+
             if label == 'disk':
                 self.disk = {}
                 self.disk['label'] = label
@@ -56,6 +65,10 @@ class MakeImage:
     def init_bulge(self):
         #print(self.bulge)
         set_parameters_from_dict(self.bulge['model'], self.bulge['parameters'])
+
+    def init_halo(self):
+            #print(self.bulge)
+            set_parameters_from_dict(self.halo['model'], self.halo['parameters'])
         
     def init_disk(self):
         set_parameters_from_dict(self.disk['model'], self.disk['parameters'])
@@ -76,6 +89,7 @@ class MakeImage:
                     for tmp_data in self.models:
                         tmp_label = tmp_data[0]
                         if label_ == tmp_label:
+                            print('label', label_)
                             model.addFunction(tmp_data[1]['model']) 
                 else:
                     print(f'No such label:{label_} in model')
@@ -169,7 +183,7 @@ class ShowResults:
             ax[0].set_xlim(-rmax*self.scale, rmax*self.scale)
             ax[1].set_xlim(-rmax*self.scale, rmax*self.scale)
         #plt.show()
-
+        ax[0].legend()
         ax = axs[1,:]
         norm = ImageNormalize(self.image, interval=MinMaxInterval(), stretch=LogStretch(10_000))
         ax[0].imshow(self.image, norm=norm, origin='lower', cmap='twilight')

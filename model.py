@@ -39,8 +39,18 @@ def init_default_bulge(bulge_model, bulge_fix=False):
     bulge.PA.setValue(90,[0,180], fixed=bulge_fix)
     bulge.ell.setValue(0.2, [0.01,0.7], fixed=bulge_fix)
     bulge.I_e.setValue(100, [0, 10**5], fixed=bulge_fix)
-    bulge.r_e.setValue(5, [0.1, 25], fixed=bulge_fix)
+    bulge.r_e.setValue(5, [0.1, 3], fixed=bulge_fix)
     bulge.n.setValue(1,[0.5,4], fixed=bulge_fix)
+    return bulge
+
+def init_default_halo(bulge_model, bulge_fix=False):
+    bulge = pyimfit.make_imfit_function(bulge_model, label='halo')
+
+    bulge.PA.setValue(90,[0,180], fixed=bulge_fix)
+    bulge.ell.setValue(0.2, [0.01,0.6], fixed=bulge_fix)
+    bulge.I_e.setValue(1000, [0, 10**5], fixed=bulge_fix)
+    bulge.r_e.setValue(25, [10, 60], fixed=bulge_fix)
+    bulge.n.setValue(1,[0.5,6], fixed=bulge_fix)
     return bulge
 
 
@@ -48,11 +58,11 @@ def init_default_disk(disk_model, disk_fix=False, is_3D=False):
     disk = pyimfit.make_imfit_function(disk_model, label='disk')
     
     disk.PA.setValue(90, [0,180], fixed=disk_fix)
-    disk.h.setValue(25, [0.1,250], fixed=disk_fix)
+    disk.h.setValue(25, [0.1,64], fixed=disk_fix)
 
     if is_3D:
         disk.n.setValue(1, [1,100], fixed=disk_fix)
-        disk.z_0.setValue(1, [0.1, 250], fixed=disk_fix)
+        disk.z_0.setValue(1, [0.1, 64], fixed=disk_fix)
         disk.J_0.setValue(20, [0,10**5], fixed=disk_fix)
         disk.inc.setValue(0, [0,90], fixed=disk_fix)
     else:
@@ -74,7 +84,7 @@ def set_broken_disk_from_exponential(disk_model, disk_cfg, bulge_cfg, disk_fix=F
     re = bulge_cfg["r_e"][0]
     disk.h1.setValue(h, [0.1*h, 10*h], fixed=disk_fix)
     disk.h2.setValue(h, [0.1*h, 10*h], fixed=disk_fix)
-    disk.r_break.setValue(3*h, [re*3, 128], fixed=disk_fix)
+    disk.r_break.setValue(3*h, [re*3, 64], fixed=disk_fix)
 
     if is_3D:
         disk.J_0.setValue(disk_cfg["J_0"][0], disk_cfg["J_0"][1:], fixed=disk_fix)
@@ -128,8 +138,9 @@ def set_double_broken_disk_from_exponential(
 
 def build_model(bulge_model, disk_model,
                  bulge_cfg=None, disk_cfg=None,
-                 bulge_fix=False, disk_fix=False, xc=250, yc=250, is_3D=False, hand_fix=None):
-
+                 bulge_fix=False, disk_fix=False, xc=250, yc=250,
+                   is_3D=False, hand_fix=None, add_halo=False, halo_cfg=None, halo_fix=False):
+    #print('halo_fix', halo_fix)
     # -------------------------------
     # Bulge
     # -------------------------------
@@ -166,7 +177,20 @@ def build_model(bulge_model, disk_model,
     if not(hand_fix is None):
         for key, value in hand_fix.items():
             getattr(disk,key).setValue(value[0], fixed=value[1])
+    disk.n.setValue(1, fixed=True)
 
+    #--------------------------------
+    # Halo
+    #--------------------------------
+    if add_halo:
+        if halo_cfg is None:
+            halo = init_default_halo('Sersic')
+        else:
+            halo = pyimfit.make_imfit_function('Sersic', label='halo')
+            set_parameters_from_dict(halo, halo_cfg, halo_fix)
+            if halo_fix:
+                #halo.ell.setValue(halo_cfg['ell'][0], [halo_cfg['ell'][1], halo_cfg['ell'][2]], fixed=False )
+                halo.I_e.setValue(halo_cfg['I_e'][0], [halo_cfg['I_e'][1], halo_cfg['I_e'][0]], fixed=False )
     # -------------------------------
     # Components
     # -------------------------------
@@ -175,5 +199,6 @@ def build_model(bulge_model, disk_model,
     model.y0.setValue(yc, [yc - 10, yc + 10])
     model.addFunction(bulge)
     model.addFunction(disk)
-
+    if add_halo:
+        model.addFunction(halo)
     return model

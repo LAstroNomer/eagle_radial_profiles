@@ -17,6 +17,7 @@ from fit import (
 )
 from imfit_run_two_breaks import fit_two_break_with_init_guess
 from visualisation import FitAnalysis, ShowResults
+from halo_component import get_halo_model
 
 scatter = {
     "I_0": 0.5,
@@ -56,16 +57,37 @@ for gal in gals:
     # Сначала только галактики без бара
     if not(gal in no_bar):
         continue
+    if gal in ['Au29', 'Au30']:
+        continue
     #print(gal)
 
     for num, j in enumerate(incs):
 
         #start = time.time()
         # =============== PREPARE ==============
+    
 
         file = f"{gal}_i{j}"
         print(file)
+        if not(os.path.exists(f'fits/{file}')):
+            sp.call(f"mkdir fits/{file}", shell=True)
 
+        if j == 0:
+            # ----------------------------------------------
+            # Fit Halo 
+            # ----------------------------------------------
+            halo_cfg, z0 = get_halo_model(hand_fix={"inc":[90,True], "PA":[90,True]}, gal=gal, path=path)
+            ell_0 = halo_cfg['ell'][0]
+            I_e0 = halo_cfg['I_e'][0]
+
+
+        # Поправки за ориентацию гало
+        ell = 1 - np.sqrt(ell_0*(2-ell_0) * np.cos(np.radians(j))**2 + (1-ell_0)**2)
+        halo_cfg['ell'][0] = ell
+
+        I_e = I_e0 * (1-ell_0)/(1-ell)
+        halo_cfg['I_e'][0] = I_e
+        
         #if os.path.exists(f'fits/{file}/best_clustered.dat'):
         #    continue
 
@@ -82,8 +104,9 @@ for gal in gals:
         xc = w/2
         yc = h/2
 
-        if not(os.path.exists(f'fits/{file}')):
-            sp.call(f"mkdir fits/{file}", shell=True)
+
+        
+
 
         # ==================== FIT inc=0 ===========================
         if j == 0:
@@ -92,7 +115,7 @@ for gal in gals:
             hand_fix = {
                 "inc":[j,True],
                 #"n":[1,True],
-                #"z_0":[1, True],
+                "z_0":[z0, True],
                 "PA": [90, False]
             }
 
@@ -100,11 +123,14 @@ for gal in gals:
             if not(os.path.exists(f'fits/{file}/best_exp.dat')):
                 result, imfit = fit_step(image, sigma, bulge_model="Sersic", disk_model="ExponentialDisk3D", 
                             bulge_cfg=None, disk_cfg=None, bulge_fix=False, disk_fix=False,
-                            xc=xc, yc=yc, is_3D=True, 
-                            hand_fix=hand_fix)
+                            xc=xc, yc=yc, is_3D=True, add_halo=True, halo_cfg=halo_cfg, halo_fix=True,
+                            hand_fix=hand_fix, fast=False)
+                simple_exp = ShowResults(image, imfit, zp=zp)
+                simple_exp.plot_cuts(f"fits/{file}/simple_exp.jpg")
+                save_imfit_to_data(result, imfit, f"fits/{file}/simple_exp.dat")
 
                 state = get_fit_state(imfit)
-              
+                
                 results_exp = multi_start_fit(image,
                                 sigma,
                                 "Sersic",
@@ -115,10 +141,13 @@ for gal in gals:
                                 state["yc"],
                                 bulge_fix=False,
                                 disk_fix=False,
-                                n_starts=3,
+                                n_starts=30,
                                 scatter=scatter,
                                 hand_fix=hand_fix,
                                 is_3D=True,
+                                fast=False,
+                                halo_cfg=halo_cfg, 
+                                halo_fix=True,
                             )  
 
                 best_exp = results_exp[0]['imfit']
@@ -129,6 +158,7 @@ for gal in gals:
                 simple_exp.plot_cuts(f"fits/{file}/best_exp.jpg")
                 for i, res in enumerate(results_exp):
                     save_imfit_to_data(res["fit"], res["imfit"], f"fits/{file}/exp_{i}.dat")
+            
 
             #exit()
 
@@ -148,12 +178,12 @@ for gal in gals:
                 state['functions']['bulge']['PA'] += [-180,180]
                 state['functions']['bulge']['ell'] += [0.01,0.8]
                 state['functions']['bulge']['I_e'] += [0,1e5]
-                state['functions']['bulge']['r_e'] += [0,25]
-                state['functions']['bulge']['n'] += [0,5]
+                state['functions']['bulge']['r_e'] += [0,3]
+                state['functions']['bulge']['n'] += [0.5,5]
                 state['functions']['disk']['PA'] += [-180,180]
                 state['functions']['disk']['J_0'] += [0,1e5]
                 state['functions']['disk']['n'] += [1,100]
-                state['functions']['disk']['z_0'] += [0,128]
+                state['functions']['disk']['z_0'] += [0,64]
                 state['functions']['disk']['inc'] += [0,90]
                 
                 new_result, new_imfit = fit_step(image, sigma, bulge_model="Sersic", 
@@ -165,7 +195,9 @@ for gal in gals:
                             xc=state["xc"],
                             yc=state["yc"],
                             hand_fix=hand_fix,
-                            is_3D=True
+                            is_3D=True,
+                            fast=False,
+                            halo_cfg=halo_cfg, halo_fix=True,
                             )
                 
                 # ------------------------------------
@@ -183,10 +215,12 @@ for gal in gals:
                                 state["yc"],
                                 bulge_fix=False,
                                 disk_fix=False,
-                                n_starts=3,
+                                n_starts=30,
                                 scatter=scatter,
                                 hand_fix=hand_fix,
-                                is_3D=True
+                                is_3D=True,
+                                fast=False,
+                                halo_cfg=halo_cfg, halo_fix=True,
                                 )
 
                 #fit_an = FitAnalysis(results)
@@ -274,14 +308,14 @@ for gal in gals:
                 hand_fix = {
                     "inc":[j,True],
                     #"n":[1,True],
-                    #"z_0":[1, False],
+                    "z_0":[z0, False],
                     "PA": [90, False]
                 }
             else:
                 hand_fix = {
                     "inc":[j,True],
                     #"n":[1,True],
-                    #"z_0":[1, True],
+                    "z_0":[z0, True],
                     "PA": [90, False]
                 }
             #if j > 70:
@@ -289,7 +323,8 @@ for gal in gals:
             #else:
             bulge_fix=False
             if not(os.path.exists(f'fits/{file}/best_guess.dat')):
-                guess_model = f'fits/{gal}_i{incs[num-1]}/best_clustered.dat'
+                #guess_model = f'fits/{gal}_i{incs[num-1]}/best_clustered.dat'
+                guess_model = f'fits/{gal}_i0/best_clustered.dat'
 
                 results = multy_fit_with_init_guess(guess_model, 
                                         image, 
@@ -297,7 +332,7 @@ for gal in gals:
                                         scatter, 
                                         hand_fix, 
                                         bulge_fix=bulge_fix,
-                                        is_3D=True, fast=False)
+                                        is_3D=True, fast=False, add_halo=True, halo_cfg=halo_cfg, halo_fix=True)
 
                 save_imfit_to_data(results[0]["fit"], results[0]["imfit"], f"fits/{file}/best_guess.dat")
 
@@ -317,6 +352,6 @@ for gal in gals:
             best_fit_two = ShowResults(image, imfit,zp=zp)
             best_fit_two.plot_cuts(f"fits/{file}/best_clustered.jpg")
             #print('Time', time.time()-start)
-    break
+    #break
     #exit()
             

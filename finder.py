@@ -23,6 +23,8 @@ def multi_start_fit(
     hand_fix=None,
     is_3D=False,
     fast=True,
+    halo_cfg=None,
+    halo_fix=True,
 ):
     """
     Запускает fit несколько раз со случайными начальными условиями.
@@ -110,6 +112,9 @@ def multi_start_fit(
             hand_fix=hand_fix,
             is_3D=is_3D,
             fast=fast,
+            halo_cfg=halo_cfg,
+            halo_fix=halo_fix,
+            add_halo=not(halo_cfg is None), 
         )
 
         state = get_fit_state(imfit)
@@ -182,7 +187,11 @@ def multy_fit_with_init_guess(guess_model,
                                 scatter, 
                                 hand_fix, 
                                 bulge_fix,
-                                is_3D=False, fast=True):
+                                is_3D=False, 
+                                fast=True,
+                                halo_fix=True,
+                                halo_cfg=None,
+                                add_halo=True):
     with open(guess_model, 'r') as ff:
         lines = ff.readlines()[:-8]
                     
@@ -206,16 +215,19 @@ def multy_fit_with_init_guess(guess_model,
                      xc=state["xc"],
                      yc=state["yc"],
                      hand_fix=hand_fix,
-                     is_3D=is_3D
+                     is_3D=is_3D,
+                     add_halo=add_halo,
+                     halo_cfg=halo_cfg,
+                     halo_fix=halo_fix,
                      )
     new_imfit = pyimfit.Imfit(double_break_model)
-    result = new_imfit.fit(image, error=sigma)
+    result = new_imfit.fit(image, error=sigma, ftol=1e-4, verbose=1)
 
 
     state = get_fit_state(new_imfit)
     state["functions"]["bulge"]['PA'] += [-180,180]
     state["functions"]["bulge"]['ell'] += [0.01,0.8]
-    state["functions"]["bulge"]['r_e'] += [0.1,25]
+    state["functions"]["bulge"]['r_e'] += [0.1,3]
     state["functions"]["bulge"]['I_e'] += [0,1e5]
     state["functions"]["bulge"]['n'] += [0.5,5]
 
@@ -227,20 +239,20 @@ def multy_fit_with_init_guess(guess_model,
         state["functions"]["disk"]['inc'] += [0,90]
         state["functions"]["disk"]['J_0'] += [0,1e5]
         if 'h1' in state['functions']['disk']:
-            state["functions"]["disk"]['h1'] += [0,250]
-            state["functions"]["disk"]['h2'] += [0,250]
-            state["functions"]["disk"]['r_break'] += [3*re,128]
+            state["functions"]["disk"]['h1'] += [0,64]
+            state["functions"]["disk"]['h2'] += [0,64]
+            state["functions"]["disk"]['r_break'] += [3*re,64]
         else:
-            state["functions"]["disk"]['h'] += [0,250]
+            state["functions"]["disk"]['h'] += [0,64]
 
         if 'h3' in state['functions']['disk']:
-            state["functions"]["disk"]['h3'] += [0,250]
-            state["functions"]["disk"]['r_break1'] += [3*re,128]
-            state["functions"]["disk"]['r_break2'] += [3*re,128]
+            state["functions"]["disk"]['h3'] += [0,64]
+            state["functions"]["disk"]['r_break1'] += [3*re,64]
+            state["functions"]["disk"]['r_break2'] += [3*re,64]
 
 
         state["functions"]["disk"]['n'] += [1,100]
-        state["functions"]["disk"]['z_0'] += [0,128]
+        state["functions"]["disk"]['z_0'] += [0,64]
 
     print(state)
     #exit()
@@ -254,10 +266,12 @@ def multy_fit_with_init_guess(guess_model,
                             state["yc"],
                             bulge_fix=bulge_fix,
                             disk_fix=False,
-                            n_starts=3,
+                            n_starts=10,
                             scatter=scatter,
                             hand_fix=hand_fix,
                             is_3D=is_3D, fast=fast,
+                            halo_cfg=halo_cfg,
+                            halo_fix=halo_fix,
                             )
 
     return results
