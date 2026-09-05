@@ -104,5 +104,89 @@ def save_imfit_to_data(result, imfit, output):
 
             print(key, result[key], file=file)
 
+import os
+def get_fit_state_from_file(filename):
+    function_dict = {}
+
+    xc = None
+    yc = None
+    current_label = None
+  
+    with open(filename, "r") as f:
+        for line in f:
+            line = line.strip()
+
+            # пропускаем пустые строки
+            if not line:
+                continue
+
+            # ------------------------
+            # X0 / Y0
+            # ------------------------
+            if line.startswith("X0"):
+                parts = line.split()
+                xc = float(parts[1])
+                continue
+
+            if line.startswith("Y0"):
+                parts = line.split()
+                yc = float(parts[1])
+                continue
+
+            # ------------------------
+            # FUNCTION ... # LABEL ...
+            # ------------------------
+            if line.startswith("FUNCTION"):
+                if "# LABEL" in line:
+                    current_label = line.split("# LABEL", 1)[1].strip()
+                    function_dict[current_label] = {}
+
+                else:
+                    current_label = None
+
+                continue
+
+            # ------------------------
+            # параметры функции
+            # ------------------------
+            if current_label is not None:
+
+                # дошли до служебной части после моделей
+                if line.startswith((
+                    "solverName",
+                    "fitConverged",
+                    "nIter",
+                    "nFuncEvals",
+                    "fitStat",
+                    "fitStatReduced",
+                    "aic",
+                    "bic"
+                )):
+                    current_label = None
+                    continue
+
+                parts = line.split()
+
+                if len(parts) >= 2:
+                    param_name = parts[0]
+
+                    try:
+                        value = float(parts[1])
+                    except ValueError:
+                        continue
+
+                    # имитируем формат getModelAsDict:
+                    # [value, lower_limit, upper_limit]
+                    #
+                    # bounds из этого файла восстановить нельзя,
+                    # поэтому пока кладём только значение
+                    function_dict[current_label][param_name] = [value]
+
+    return {
+        "xc": xc,
+        "yc": yc,
+        "functions": function_dict,
+    }
+
 
 

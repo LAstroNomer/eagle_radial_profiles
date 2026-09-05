@@ -14,6 +14,7 @@ from fit import (
     fit_step,
     get_fit_state,
     save_imfit_to_data,
+    get_fit_state_from_file,
 )
 from imfit_run_two_breaks import fit_two_break_with_init_guess
 from visualisation import FitAnalysis, ShowResults
@@ -58,7 +59,7 @@ for gal in gals:
     # Сначала только галактики без бара
     if (gal in no_bar):
         continue
-    if gal in ['Au29', 'Au30']:
+    if gal in ['Au11','Au29', 'Au30']:
         continue
     #print(gal)
 
@@ -77,22 +78,37 @@ for gal in gals:
             # ----------------------------------------------
             # Fit Halo 
             # ----------------------------------------------
-            halo_cfg, z0 = get_halo_model(hand_fix={
-                'disk':{"inc":[90,True], "PA":[90,True]}}, gal=gal, path=path)
+            if not(os.path.exists(f'fits/{gal}_i90/halo.dat')):
+                halo_cfg, z0 = get_halo_model(hand_fix={
+                    'disk':{"inc":[90,True], "PA":[90,True]}}, gal=gal, path=path)
+                
+            else:
+                state = get_fit_state_from_file(f'fits/{gal}_i90/halo.dat')
+                halo_cfg = state['functions']['halo']
+                z0 = state['functions']['disk']['z_0'][0]
             ell_0 = halo_cfg['ell'][0]
-            I_e0 = halo_cfg['I_e'][0]
+            I_e0 = halo_cfg['I_e'][0]  
         
         if j == 0:
             # ----------------------------------------------
             # Fit Bar 
             # ----------------------------------------------
-            bar_cfg = get_bar_model(hand_fix={
-                                    'disk': {
-                                            "inc":[0,True],
-                                            "PA":[90,False],
-                                             "z_0":[1,True],
-                                           },}
-                                   , gal=gal, path=path)
+            if not(os.path.exists(f'fits/{gal}_i0/bar.dat')):
+                bar_cfg = get_bar_model(hand_fix={
+                                        'disk': {
+                                                "inc":[0,True],
+                                                "PA":[90,False],
+                                                "z_0":[1,True],
+                                            },
+                                        'bar':{
+                                            'inc':[0, True],
+                                            'PA':[90, True],
+                                            'barPA':[45,True],
+                                        }}
+                                    , gal=gal, path=path)
+            else:
+                state = get_fit_state_from_file(f'fits/{gal}_i0/bar.dat')
+                bar_cfg = state['functions']['bar']
 
             #ell_0 = halo_cfg['ell'][0]
             #I_e0 = halo_cfg['I_e'][0]
@@ -135,7 +151,10 @@ for gal in gals:
                 #"n":[1,True],
                 "z_0":[z0, True],
                 "PA": [90, False]
-            }
+            },
+                'bar':{
+                    'inc':[0, True],
+                }
             }
 
             # Bule + Exp Disk
@@ -181,7 +200,7 @@ for gal in gals:
                 simple_exp.plot_cuts(f"fits/{file}/best_exp.jpg")
                 for i, res in enumerate(results_exp):
                     save_imfit_to_data(res["fit"], res["imfit"], f"fits/{file}/exp_{i}.dat")
-                exit()
+               
 
             #exit()
 
@@ -220,7 +239,11 @@ for gal in gals:
                             hand_fix=hand_fix,
                             is_3D=True,
                             fast=False,
-                            halo_cfg=halo_cfg, halo_fix=True,
+                            halo_cfg=halo_cfg, 
+                            halo_fix=True,
+                            add_bar=True,
+                            bar_cfg=bar_cfg,
+                            bar_fix=True,
                             )
                 
                 # ------------------------------------
@@ -243,7 +266,11 @@ for gal in gals:
                                 hand_fix=hand_fix,
                                 is_3D=True,
                                 fast=False,
-                                halo_cfg=halo_cfg, halo_fix=True,
+                                halo_cfg=halo_cfg, 
+                                halo_fix=True,
+                                add_bar=True,
+                                bar_fix=True,
+                                bar_cfg=bar_cfg,
                                 )
 
                 #fit_an = FitAnalysis(results)
@@ -320,7 +347,7 @@ for gal in gals:
             best_fit.plot_cuts(f"fits/{file}/best_clustered.jpg")
             
             #print('Time', time.time()-start)
-            
+           
         
         # -------------------------------------------
         # Other inc with init guess from previous fit
@@ -329,17 +356,27 @@ for gal in gals:
         else:
             if j > 40:
                 hand_fix = {
+                    'disk':{
                     "inc":[j,True],
                     #"n":[1,True],
                     "z_0":[z0, False],
                     "PA": [90, False]
+                    },
+                    'bar':{
+                        'inc':[j, True]
+                    }
                 }
             else:
                 hand_fix = {
+                    'disk':{
                     "inc":[j,True],
                     #"n":[1,True],
                     "z_0":[z0, True],
                     "PA": [90, False]
+                    },
+                    'bar':{
+                        'inc':[j,True],
+                    }
                 }
             #if j > 70:
             #    bulge_fix = True
@@ -355,7 +392,14 @@ for gal in gals:
                                         scatter, 
                                         hand_fix, 
                                         bulge_fix=bulge_fix,
-                                        is_3D=True, fast=False, add_halo=True, halo_cfg=halo_cfg, halo_fix=True)
+                                        is_3D=True, 
+                                        fast=False,
+                                        add_halo=True,
+                                        halo_cfg=halo_cfg,
+                                        halo_fix=True,
+                                        add_bar=True,
+                                        bar_fix=True,
+                                        bar_cfg=bar_cfg)
 
                 save_imfit_to_data(results[0]["fit"], results[0]["imfit"], f"fits/{file}/best_guess.dat")
 

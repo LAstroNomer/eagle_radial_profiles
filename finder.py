@@ -60,8 +60,10 @@ def multi_start_fit(
                 #print(name, values)
                 value, low, high = values
 
-                if low == high:
+                if (low == high):
                     continue
+                if low >= high:
+                    low, high = high, low
 
                 # координаты можно не трогать
                 if name in ("PA", "ell", "inc"):

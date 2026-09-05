@@ -38,7 +38,7 @@ def init_default_bulge(bulge_model, bulge_fix=False):
 
     bulge.PA.setValue(90,[0,180], fixed=bulge_fix)
     bulge.ell.setValue(0.2, [0.0,0.7], fixed=bulge_fix)
-    bulge.I_e.setValue(100, [0, 10**5], fixed=bulge_fix)
+    bulge.I_e.setValue(10, [0, 10**5], fixed=bulge_fix)
     bulge.r_e.setValue(5, [0.1, 3], fixed=bulge_fix)
     bulge.n.setValue(1,[0.5,4], fixed=bulge_fix)
     return bulge
@@ -48,7 +48,7 @@ def init_default_halo(bulge_model, bulge_fix=False):
 
     bulge.PA.setValue(90,[0,180], fixed=bulge_fix)
     bulge.ell.setValue(0.2, [0.01,0.6], fixed=bulge_fix)
-    bulge.I_e.setValue(1000, [0, 10**5], fixed=bulge_fix)
+    bulge.I_e.setValue(1, [0, 10**5], fixed=bulge_fix)
     bulge.r_e.setValue(25, [10, 60], fixed=bulge_fix)
     bulge.n.setValue(1,[0.5,6], fixed=bulge_fix)
     return bulge
@@ -63,7 +63,7 @@ def init_default_disk(disk_model, disk_fix=False, is_3D=False):
     if is_3D:
         disk.n.setValue(1, [1,100], fixed=disk_fix)
         disk.z_0.setValue(1, [0.1, 64], fixed=disk_fix)
-        disk.J_0.setValue(20, [0,10**5], fixed=disk_fix)
+        disk.J_0.setValue(10, [0,10**5], fixed=disk_fix)
         disk.inc.setValue(0, [0,90], fixed=disk_fix)
     else:
         disk.ell.setValue(0.2, [0.01, 0.7], fixed=disk_fix)
@@ -78,7 +78,7 @@ def init_default_bar(bar_model, bar_fix, is_3D=True):
     bar.inc.setValue(0, [0, 90], fixed=bar_fix)
     bar.barPA.setValue(45, [0, 180], fixed=bar_fix)
 
-    bar.J_0.setValue(100, [0, 1e5], fixed=bar_fix)
+    bar.J_0.setValue(10, [0, 1e5], fixed=bar_fix)
     bar.R_bar.setValue(10, [1, 25], fixed=bar_fix)
     bar.q.setValue(0.3, [0.1, 0.5], fixed=bar_fix)
     bar.q_z.setValue(0.3, [0.1, 0.5], fixed=bar_fix)
@@ -223,7 +223,7 @@ def build_model(bulge_model,
             set_parameters_from_dict(halo, halo_cfg, halo_fix)
             if halo_fix:
                 #halo.ell.setValue(halo_cfg['ell'][0], [halo_cfg['ell'][1], halo_cfg['ell'][2]], fixed=False )
-                halo.I_e.setValue(halo_cfg['I_e'][0], [halo_cfg['I_e'][1], halo_cfg['I_e'][0]], fixed=False )
+                halo.I_e.setValue(halo_cfg['I_e'][0], [0.0, halo_cfg['I_e'][0]], fixed=False )
     
     # --------------------------------
     # Bar
@@ -238,8 +238,10 @@ def build_model(bulge_model,
             set_parameters_from_dict(bar, bar_cfg, bar_fix)
             if bar_fix:
                 #halo.ell.setValue(halo_cfg['ell'][0], [halo_cfg['ell'][1], halo_cfg['ell'][2]], fixed=False )
-                bar.q_z.setValue(bar_cfg['q_z'][0], [bar_cfg['q_z'][1], bar_cfg['q_z'][2]], fixed=False )
-    
+                bar.q_z.setValue(bar_cfg['q_z'][0], [0.1, 0.8], fixed=False )
+        if 'bar' in hand_fix:
+            for key, value in hand_fix['bar'].items():
+                getattr(bar,key).setValue(value[0], fixed=value[1])
     
     
     # -------------------------------
